@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  room-db:
+    image: postgres:15-alpine
+    container_name: room-db
+    environment:
+      POSTGRES_DB: roomdb
+      POSTGRES_USER: roomuser
+      POSTGRES_PASSWORD: roompass
+    ports:
+      - "5436:5432"
+    volumes:
+      - room-data:/var/lib/postgresql/data
+
+  booking-db:
+    image: postgres:15-alpine
+    container_name: booking-db
+    environment:
+      POSTGRES_DB: bookingdb
+      POSTGRES_USER: bookinguser
+      POSTGRES_PASSWORD: bookingpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - booking-data:/var/lib/postgresql/data
+
+  customer-db:
+    image: postgres:15-alpine
+    container_name: customer-db
+    environment:
+      POSTGRES_DB: customerdb
+      POSTGRES_USER: customeruser
+      POSTGRES_PASSWORD: customerpass
+    ports:
+      - "5434:5432"
+    volumes:
+      - customer-data:/var/lib/postgresql/data
+
+  billing-db:
+    image: postgres:15-alpine
+    container_name: billing-db
+    environment:
+      POSTGRES_DB: billingdb
+      POSTGRES_USER: billinguser
+      POSTGRES_PASSWORD: billingpass
+    ports:
+      - "5435:5432"
+    volumes:
+      - billing-data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+volumes:
+  room-data:
+  booking-data:
+  customer-data:
+  billing-data:
+  rabbitmq-data:

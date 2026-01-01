@@ -1,0 +1,51 @@
+<p>room-card works!</p>
+<mat-card class="room-card">
+  <div class="room-image">
+    <img 
+      [src]="room.imageUrl || 'assets/default-room.jpg'" 
+      [alt]="'Chambre ' + room.roomNumber"
+      (error)="$any($event.target).src='assets/default-room.jpg'"
+    >
+    <div class="room-status" [ngClass]="getStatusColor(room.status)">
+      {{ getStatusLabel(room.status) }}
+    </div>
+  </div>
+
+  <mat-card-content>
+    <div class="room-header">
+      <h3>Chambre {{ room.roomNumber }}</h3>
+      <span class="room-type">{{ getRoomTypeLabel(room.roomType) }}</span>
+    </div>
+
+    <div class="room-details">
+      <div class="detail-item">
+        <mat-icon>people</mat-icon>
+        <span>{{ room.capacity }} personne(s)</span>
+      </div>
+      <div class="detail-item" *ngIf="room.floor">
+        <mat-icon>layers</mat-icon>
+        <span>Étage {{ room.floor }}</span>
+      </div>
+    </div>
+
+    <p class="room-description" *ngIf="room.description">
+      {{ room.description }}
+    </p>
+
+    <div class="room-footer">
+      <div class="price">
+        <span class="amount">{{ room.pricePerNight | number:'1.2-2' }}</span>
+        <span class="currency">DT/nuit</span>
+      </div>
+      <button 
+        mat-raised-button 
+        color="primary"
+        [disabled]="room.status !== 'AVAILABLE'"
+        (click)="onBookRoom()"
+      >
+        <mat-icon>book_online</mat-icon>
+        Réserver
+      </button>
+    </div>
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,116 @@
+<div class="auth-form-container">
+  <h2>Créer un compte</h2>
+  
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Prénom</mat-label>
+        <input 
+          matInput 
+          formControlName="firstName"
+          placeholder="Votre prénom"
+        >
+        <mat-icon matPrefix>person</mat-icon>
+        <mat-error *ngIf="f['firstName'].hasError('required')">
+          Le prénom est requis
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="half-width">
+        <mat-label>Nom</mat-label>
+        <input 
+          matInput 
+          formControlName="lastName"
+          placeholder="Votre nom"
+        >
+        <mat-icon matPrefix>person</mat-icon>
+        <mat-error *ngIf="f['lastName'].hasError('required')">
+          Le nom est requis
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email</mat-label>
+      <input 
+        matInput 
+        type="email" 
+        formControlName="email"
+        placeholder="exemple@email.com"
+      >
+      <mat-icon matPrefix>email</mat-icon>
+      <mat-error *ngIf="f['email'].hasError('required')">
+        L'email est requis
+      </mat-error>
+      <mat-error *ngIf="f['email'].hasError('email')">
+        Email invalide
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Mot de passe</mat-label>
+      <input 
+        matInput 
+        [type]="hidePassword ? 'password' : 'text'"
+        formControlName="password"
+        placeholder="Au moins 6 caractères"
+      >
+      <mat-icon matPrefix>lock</mat-icon>
+      <button 
+        mat-icon-button 
+        matSuffix 
+        type="button"
+        (click)="hidePassword = !hidePassword"
+      >
+        <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+      </button>
+      <mat-error *ngIf="f['password'].hasError('required')">
+        Le mot de passe est requis
+      </mat-error>
+      <mat-error *ngIf="f['password'].hasError('minlength')">
+        Au moins 6 caractères requis
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Téléphone (optionnel)</mat-label>
+      <input 
+        matInput 
+        formControlName="phoneNumber"
+        placeholder="+216 12 345 678"
+      >
+      <mat-icon matPrefix>phone</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Ville (optionnel)</mat-label>
+      <input 
+        matInput 
+        formControlName="city"
+        placeholder="Votre ville"
+      >
+      <mat-icon matPrefix>location_city</mat-icon>
+    </mat-form-field>
+
+    <button 
+      mat-raised-button 
+      color="primary" 
+      type="submit"
+      class="full-width submit-button"
+      [disabled]="loading"
+    >
+      <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+      <span *ngIf="!loading">S'inscrire</span>
+    </button>
+  </form>
+
+  <div class="auth-footer">
+    <p>Vous avez déjà un compte ? 
+      <a routerLink="/auth/login">Se connecter</a>
+    </p>
+  </div>
+</div>

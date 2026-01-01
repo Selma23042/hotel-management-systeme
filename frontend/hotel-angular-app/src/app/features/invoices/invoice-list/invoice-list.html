@@ -1,0 +1,120 @@
+<p>invoice-list works!</p>
+<div class="invoices-container">
+  <div class="page-header">
+    <div>
+      <h1>Mes Factures</h1>
+      <p>Consultez et téléchargez vos factures</p>
+    </div>
+  </div>
+
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline">
+        <mat-label>Filtrer par statut</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onStatusChange()">
+          <mat-option value="ALL">Toutes</mat-option>
+          <mat-option value="PENDING">En attente</mat-option>
+          <mat-option value="PAID">Payées</mat-option>
+          <mat-option value="CANCELLED">Annulées</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div class="results-info">
+        <mat-icon>info</mat-icon>
+        <span>{{ filteredInvoices.length }} facture(s)</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading && filteredInvoices.length === 0" class="no-results">
+    <mat-icon>receipt_long</mat-icon>
+    <h3>Aucune facture</h3>
+    <p>Vous n'avez pas encore de factures</p>
+  </div>
+
+  <div *ngIf="!loading && filteredInvoices.length > 0" class="invoices-table">
+    <table mat-table [dataSource]="filteredInvoices" class="mat-elevation-z2">
+      
+      <ng-container matColumnDef="invoiceNumber">
+        <th mat-header-cell *matHeaderCellDef>N° Facture</th>
+        <td mat-cell *matCellDef="let invoice">
+          <strong>{{ invoice.invoiceNumber }}</strong>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="bookingId">
+        <th mat-header-cell *matHeaderCellDef>Réservation</th>
+        <td mat-cell *matCellDef="let invoice">
+          #{{ invoice.bookingId }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="dates">
+        <th mat-header-cell *matHeaderCellDef>Séjour</th>
+        <td mat-cell *matCellDef="let invoice">
+          <div class="dates-cell">
+            {{ invoice.checkInDate | date:'dd/MM/yyyy' }} - 
+            {{ invoice.checkOutDate | date:'dd/MM/yyyy' }}
+            <br>
+            <small>({{ invoice.numberOfNights }} nuit(s))</small>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="amount">
+        <th mat-header-cell *matHeaderCellDef>Montant</th>
+        <td mat-cell *matCellDef="let invoice">
+          <div class="amount-cell">
+            <div class="total">{{ invoice.totalAmount | number:'1.2-2' }} DT</div>
+            <small class="details">
+              Chambre: {{ invoice.roomCharges | number:'1.2-2' }} DT<br>
+              Taxe: {{ invoice.taxAmount | number:'1.2-2' }} DT
+            </small>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Statut</th>
+        <td mat-cell *matCellDef="let invoice">
+          <span class="status-badge" [ngClass]="getStatusColor(invoice.status)">
+            {{ getStatusLabel(invoice.status) }}
+          </span>
+          <div *ngIf="invoice.paidAt" class="paid-date">
+            <small>Payée le {{ invoice.paidAt | date:'dd/MM/yyyy' }}</small>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let invoice">
+          <button 
+            mat-icon-button 
+            [matMenuTriggerFor]="menu"
+            color="primary"
+          >
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item [routerLink]="['/invoices', invoice.id]">
+              <mat-icon>visibility</mat-icon>
+              <span>Voir détails</span>
+            </button>
+            <button mat-menu-item (click)="downloadInvoice(invoice)">
+              <mat-icon>download</mat-icon>
+              <span>Télécharger PDF</span>
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </div>
+</div>

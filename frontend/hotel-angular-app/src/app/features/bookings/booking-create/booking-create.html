@@ -1,0 +1,133 @@
+<div class="booking-create-container">
+  <div class="page-header">
+    <button mat-icon-button routerLink="/rooms">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div>
+      <h1>Nouvelle Réservation</h1>
+      <p>Complétez le formulaire pour réserver votre chambre</p>
+    </div>
+  </div>
+
+  <div class="booking-content">
+    <div class="booking-form-section">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Détails de la réservation</mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div *ngIf="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </div>
+
+          <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Date d'arrivée</mat-label>
+              <input 
+                matInput 
+                [matDatepicker]="checkInPicker"
+                formControlName="checkInDate"
+                [min]="minDate"
+              >
+              <mat-datepicker-toggle matSuffix [for]="checkInPicker"></mat-datepicker-toggle>
+              <mat-datepicker #checkInPicker></mat-datepicker>
+              <mat-error>La date d'arrivée est requise</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Date de départ</mat-label>
+              <input 
+                matInput 
+                [matDatepicker]="checkOutPicker"
+                formControlName="checkOutDate"
+                [min]="minDate"
+              >
+              <mat-datepicker-toggle matSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
+              <mat-datepicker #checkOutPicker></mat-datepicker>
+              <mat-error>La date de départ est requise</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nombre de personnes</mat-label>
+              <input 
+                matInput 
+                type="number"
+                formControlName="numberOfGuests"
+                min="1"
+              >
+              <mat-icon matPrefix>people</mat-icon>
+              <mat-error>Le nombre de personnes est requis</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Demandes spéciales (optionnel)</mat-label>
+              <textarea 
+                matInput 
+                formControlName="specialRequests"
+                rows="4"
+                placeholder="Ex: Chambre avec vue sur mer, lit bébé..."
+              ></textarea>
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button 
+                mat-raised-button 
+                type="button"
+                routerLink="/rooms"
+              >
+                Annuler
+              </button>
+              <button 
+                mat-raised-button 
+                color="primary"
+                type="submit"
+                [disabled]="loading || bookingForm.invalid"
+              >
+                <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+                <span *ngIf="!loading">Confirmer la réservation</span>
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="booking-summary-section" *ngIf="selectedRoom">
+      <mat-card class="summary-card">
+        <mat-card-header>
+          <mat-card-title>Résumé</mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div class="room-info">
+            <img 
+              [src]="selectedRoom.imageUrl || 'assets/default-room.jpg'"
+              [alt]="'Chambre ' + selectedRoom.roomNumber"
+            >
+            <h3>Chambre {{ selectedRoom.roomNumber }}</h3>
+            <p>{{ selectedRoom.roomType }}</p>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <div class="price-details">
+            <div class="price-line">
+              <span>Prix par nuit</span>
+              <span class="price">{{ selectedRoom.pricePerNight | number:'1.2-2' }} DT</span>
+            </div>
+            <div class="price-line total">
+              <span>Total</span>
+              <span class="price">{{ calculateTotalPrice() | number:'1.2-2' }} DT</span>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <mat-icon>info</mat-icon>
+            <p>Le paiement sera effectué à l'hôtel lors de votre arrivée</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

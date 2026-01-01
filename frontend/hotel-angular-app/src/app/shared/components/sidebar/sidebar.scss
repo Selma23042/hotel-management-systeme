@@ -1,0 +1,47 @@
+.sidebar {
+  width: 260px;
+  height: calc(100vh - 64px);
+  position: fixed;
+  top: 64px;
+  left: 0;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+  color: #666;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+  
+  span {
+    font-size: 15px;
+    font-weight: 500;
+  }
+  
+  &:hover {
+    background: #f5f5f5;
+    color: #667eea;
+  }
+  
+  &.active {
+    background: linear-gradient(90deg, #667eea 0%, rgba(102, 126, 234, 0.1) 100%);
+    color: #667eea;
+    border-left: 4px solid #667eea;
+    padding-left: 20px;
+  }
+}

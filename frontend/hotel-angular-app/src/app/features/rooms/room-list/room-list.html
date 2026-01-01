@@ -1,0 +1,68 @@
+<p>room-list works!</p>
+<div class="rooms-container">
+  <div class="page-header">
+    <h1>Nos Chambres</h1>
+    <p>Découvrez notre sélection de chambres</p>
+  </div>
+
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Type de chambre</mat-label>
+          <mat-select [(ngModel)]="selectedType" (selectionChange)="onTypeChange()">
+            <mat-option *ngFor="let type of roomTypes" [value]="type.value">
+              {{ type.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Statut</mat-label>
+          <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onStatusChange()">
+            <mat-option value="ALL">Tous</mat-option>
+            <mat-option value="AVAILABLE">Disponibles</mat-option>
+            <mat-option value="OCCUPIED">Occupées</mat-option>
+            <mat-option value="RESERVED">Réservées</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <div class="price-filter">
+          <label>Prix : {{ minPrice }} - {{ maxPrice }} DT</label>
+          <mat-slider 
+            min="0" 
+            max="1000" 
+            step="10"
+            [(ngModel)]="maxPrice"
+            (input)="onPriceChange()"
+          >
+            <input matSliderThumb>
+          </mat-slider>
+        </div>
+      </div>
+
+      <div class="results-info">
+        <mat-icon>info</mat-icon>
+        <span>{{ filteredRooms.length }} chambre(s) trouvée(s)</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading && filteredRooms.length === 0" class="no-results">
+    <mat-icon>search_off</mat-icon>
+    <h3>Aucune chambre trouvée</h3>
+    <p>Essayez de modifier vos filtres de recherche</p>
+  </div>
+
+  <div *ngIf="!loading && filteredRooms.length > 0" class="rooms-grid">
+    <app-room-card 
+      *ngFor="let room of filteredRooms"
+      [room]="room"
+      (bookRoom)="onBookRoom($event)"
+    ></app-room-card>
+  </div>
+</div>

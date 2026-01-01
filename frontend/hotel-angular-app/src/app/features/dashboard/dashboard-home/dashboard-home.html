@@ -1,0 +1,75 @@
+<div class="dashboard-home">
+  <div class="welcome-section" *ngIf="currentUser$ | async as user">
+    <h1>Bienvenue, {{ user.firstName }} !</h1>
+    <p>Voici un aperçu de votre compte</p>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading" class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon color="primary">book_online</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.totalBookings }}</h3>
+          <p>Réservations totales</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon color="warn">pending</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.pendingBookings }}</h3>
+          <p>En attente</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon color="accent">receipt</mat-icon>
+</div>
+<div class="stat-info">
+<h3>{{ stats.totalInvoices }}</h3>
+<p>Factures</p>
+</div>
+</mat-card-content>
+</mat-card>
+<mat-card class="stat-card">
+  <mat-card-content>
+    <div class="stat-icon">
+      <mat-icon style="color: #4caf50;">meeting_room</mat-icon>
+    </div>
+    <div class="stat-info">
+      <h3>{{ stats.availableRooms }}</h3>
+      <p>Chambres disponibles</p>
+    </div>
+  </mat-card-content>
+</mat-card></div>
+  <div class="quick-actions">
+    <h2>Actions rapides</h2>
+    <div class="actions-grid">
+      <button mat-raised-button color="primary" routerLink="/rooms">
+        <mat-icon>search</mat-icon>
+        Rechercher une chambre
+      </button>
+      <button mat-raised-button color="accent" routerLink="/bookings">
+        <mat-icon>list</mat-icon>
+        Mes réservations
+      </button>
+      <button mat-raised-button routerLink="/invoices">
+        <mat-icon>receipt_long</mat-icon>
+        Mes factures
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,128 @@
+<div class="bookings-container">
+  <div class="page-header">
+    <div>
+      <h1>Mes Réservations</h1>
+      <p>Gérez toutes vos réservations</p>
+    </div>
+    <button mat-raised-button color="primary" routerLink="/rooms">
+      <mat-icon>add</mat-icon>
+      Nouvelle Réservation
+    </button>
+  </div>
+
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline">
+        <mat-label>Filtrer par statut</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onStatusChange()">
+          <mat-option value="ALL">Toutes</mat-option>
+          <mat-option value="PENDING">En attente</mat-option>
+          <mat-option value="CONFIRMED">Confirmées</mat-option>
+          <mat-option value="COMPLETED">Terminées</mat-option>
+          <mat-option value="CANCELLED">Annulées</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div class="results-info">
+        <mat-icon>info</mat-icon>
+        <span>{{ filteredBookings.length }} réservation(s)</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading && filteredBookings.length === 0" class="no-results">
+    <mat-icon>event_busy</mat-icon>
+    <h3>Aucune réservation</h3>
+    <p>Vous n'avez pas encore de réservations</p>
+    <button mat-raised-button color="primary" routerLink="/rooms">
+      Réserver une chambre
+    </button>
+  </div>
+
+  <div *ngIf="!loading && filteredBookings.length > 0" class="bookings-table">
+    <table mat-table [dataSource]="filteredBookings" class="mat-elevation-z2">
+      
+      <ng-container matColumnDef="roomNumber">
+        <th mat-header-cell *matHeaderCellDef>Chambre</th>
+        <td mat-cell *matCellDef="let booking">
+          <strong>{{ booking.roomNumber }}</strong>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="dates">
+        <th mat-header-cell *matHeaderCellDef>Dates</th>
+        <td mat-cell *matCellDef="let booking">
+          <div class="dates-cell">
+            <div>
+              <mat-icon>login</mat-icon>
+              {{ booking.checkInDate | date:'dd/MM/yyyy' }}
+            </div>
+            <div>
+              <mat-icon>logout</mat-icon>
+              {{ booking.checkOutDate | date:'dd/MM/yyyy' }}
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="guests">
+        <th mat-header-cell *matHeaderCellDef>Personnes</th>
+        <td mat-cell *matCellDef="let booking">
+          <mat-icon>people</mat-icon>
+          {{ booking.numberOfGuests }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="totalPrice">
+        <th mat-header-cell *matHeaderCellDef>Prix Total</th>
+        <td mat-cell *matCellDef="let booking">
+          <strong class="price">{{ booking.totalPrice | number:'1.2-2' }} DT</strong>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Statut</th>
+        <td mat-cell *matCellDef="let booking">
+          <span class="status-badge" [ngClass]="getStatusColor(booking.status)">
+            {{ getStatusLabel(booking.status) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let booking">
+          <button 
+            mat-icon-button 
+            [matMenuTriggerFor]="menu"
+            color="primary"
+          >
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item [routerLink]="['/bookings', booking.id]">
+              <mat-icon>visibility</mat-icon>
+              <span>Voir détails</span>
+            </button>
+            <button 
+              mat-menu-item 
+              (click)="cancelBooking(booking)"
+              [disabled]="booking.status === 'CANCELLED' || booking.status === 'COMPLETED'"
+            >
+              <mat-icon>cancel</mat-icon>
+              <span>Annuler</span>
+            </button>
+          </mat-menu>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </div>
+</div>
+```

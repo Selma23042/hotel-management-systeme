@@ -1,0 +1,302 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven 'Maven-3.9'
+        nodejs 'NodeJS-18'
+        jdk 'JDK-17'
+    }
+    
+    environment {
+        PROJECT_NAME = 'hotel-management'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Cloning repository...'
+                checkout scm
+            }
+        }
+        
+        stage('Build Backend Services') {
+            parallel {
+                stage('Build Eureka') {
+                    steps {
+                        echo '🔧 Building Eureka Server...'
+                        dir('microservices/eureka-server') {
+                            bat 'mvn clean compile -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Gateway') {
+                    steps {
+                        echo '🔧 Building API Gateway...'
+                        dir('microservices/api-gateway') {
+                            bat 'mvn clean compile -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Room Service') {
+                    steps {
+                        echo '🔧 Building Room Service...'
+                        dir('microservices/room-service') {
+                            bat 'mvn clean compile -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Customer Service') {
+                    steps {
+                        echo '🔧 Building Customer Service...'
+                        dir('microservices/customer-service') {
+                            bat 'mvn clean compile -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Booking Service') {
+                    steps {
+                        echo '🔧 Building Booking Service...'
+                        dir('microservices/booking-service') {
+                            bat 'mvn clean compile -DskipTests'
+                        }
+                    }
+                }
+                stage('Build Billing Service') {
+                    steps {
+                        echo '🔧 Building Billing Service...'
+                        dir('microservices/billing-service') {
+                            bat 'mvn clean compile -DskipTests'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Build Frontend') {
+            steps {
+                echo '🎨 Building Frontend...'
+                dir('frontend/hotel-angular-app') {
+                    bat 'npm ci'
+                    bat 'npm run build'
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            parallel {
+                stage('Test Room Service') {
+                    steps {
+                        echo '🧪 Testing Room Service...'
+                        dir('microservices/room-service') {
+                            bat 'mvn test'
+                        }
+                    }
+                    post {
+                        always {
+                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+                stage('Test Customer Service') {
+                    steps {
+                        echo '🧪 Testing Customer Service...'
+                        dir('microservices/customer-service') {
+                            bat 'mvn test'
+                        }
+                    }
+                    post {
+                        always {
+                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+                stage('Test Booking Service') {
+                    steps {
+                        echo '🧪 Testing Booking Service...'
+                        dir('microservices/booking-service') {
+                            bat 'mvn test'
+                        }
+                    }
+                    post {
+                        always {
+                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+                stage('Test Billing Service') {
+                    steps {
+                        echo '🧪 Testing Billing Service...'
+                        dir('microservices/billing-service') {
+                            bat 'mvn test'
+                        }
+                    }
+                    post {
+                        always {
+                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Package Services') {
+            parallel {
+                stage('Package Eureka') {
+                    steps {
+                        echo '📦 Packaging Eureka Server...'
+                        dir('microservices/eureka-server') {
+                            bat 'mvn package -DskipTests'
+                        }
+                    }
+                }
+                stage('Package Gateway') {
+                    steps {
+                        echo '📦 Packaging API Gateway...'
+                        dir('microservices/api-gateway') {
+                            bat 'mvn package -DskipTests'
+                        }
+                    }
+                }
+                stage('Package Room Service') {
+                    steps {
+                        echo '📦 Packaging Room Service...'
+                        dir('microservices/room-service') {
+                            bat 'mvn package -DskipTests'
+                        }
+                    }
+                }
+                stage('Package Customer Service') {
+                    steps {
+                        echo '📦 Packaging Customer Service...'
+                        dir('microservices/customer-service') {
+                            bat 'mvn package -DskipTests'
+                        }
+                    }
+                }
+                stage('Package Booking Service') {
+                    steps {
+                        echo '📦 Packaging Booking Service...'
+                        dir('microservices/booking-service') {
+                            bat 'mvn package -DskipTests'
+                        }
+                    }
+                }
+                stage('Package Billing Service') {
+                    steps {
+                        echo '📦 Packaging Billing Service...'
+                        dir('microservices/billing-service') {
+                            bat 'mvn package -DskipTests'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Stop Running Containers') {
+            steps {
+                script {
+                    echo '🛑 Stopping existing containers...'
+                    dir('docker') {
+                        bat 'docker-compose down || echo "No containers to stop"'
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    echo '🐳 Building Docker images locally...'
+                    dir('docker') {
+                        bat 'docker-compose build'
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy Application') {
+            steps {
+                script {
+                    echo '🚀 Deploying application...'
+                    dir('docker') {
+                        bat 'docker-compose up -d'
+                    }
+                    
+                    echo '⏳ Waiting for services to be healthy...'
+                    sleep time: 30, unit: 'SECONDS'
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    echo '🏥 Checking service health...'
+                    
+                    def services = [
+                        [name: 'Eureka Server', url: 'http://localhost:8761/actuator/health'],
+                        [name: 'API Gateway', url: 'http://localhost:8080/actuator/health'],
+                        [name: 'Room Service', url: 'http://localhost:8081/actuator/health'],
+                        [name: 'Customer Service', url: 'http://localhost:8083/actuator/health'],
+                        [name: 'Booking Service', url: 'http://localhost:8082/actuator/health'],
+                        [name: 'Billing Service', url: 'http://localhost:8084/actuator/health']
+                    ]
+                    
+                    services.each { service ->
+                        retry(3) {
+                            sleep time: 5, unit: 'SECONDS'
+                            bat """
+                                curl -f ${service.url} || exit 1
+                            """
+                            echo "✅ ${service.name} is healthy"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '🧹 Cleaning up...'
+            bat 'docker system prune -f --volumes=false'
+        }
+        success {
+            echo '''
+            ✅ ========================================
+            ✅  PIPELINE EXECUTED SUCCESSFULLY!
+            ✅ ========================================
+            
+            🌐 Application URLs:
+            📊 Eureka Dashboard: http://localhost:8761
+            🚪 API Gateway: http://localhost:8080
+            🛏️  Room Service: http://localhost:8081
+            👤 Customer Service: http://localhost:8083
+            📅 Booking Service: http://localhost:8082
+            💰 Billing Service: http://localhost:8084
+            🎨 Frontend: http://localhost:4200
+            🐰 RabbitMQ: http://localhost:15672 (admin/admin)
+            
+            ✅ ========================================
+            '''
+        }
+        failure {
+            echo '''
+            ❌ ========================================
+            ❌  PIPELINE FAILED!
+            ❌ ========================================
+            
+            📋 Troubleshooting:
+            1. Check Docker Desktop is running
+            2. Verify ports are not in use
+            3. Check Jenkins logs
+            4. Run: docker-compose logs
+            
+            ❌ ========================================
+            '''
+        }
+        unstable {
+            echo '⚠️ Pipeline completed with warnings'
+        }
+    }
+}

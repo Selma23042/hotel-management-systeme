@@ -1,7 +1,13 @@
 <div class="dashboard-home">
-  <div class="welcome-section" *ngIf="currentUser$ | async as user">
-    <h1>Bienvenue, {{ user.firstName }} !</h1>
-    <p>Voici un aperçu de votre compte</p>
+  <div class="welcome-section">
+    <ng-container *ngIf="currentUser$ | async as user; else notLoggedIn">
+      <h1>Bienvenue, {{ user.firstName }} !</h1>
+      <p>Voici un aperçu de votre compte</p>
+    </ng-container>
+    <ng-template #notLoggedIn>
+      <h1>Bienvenue sur le Dashboard !</h1>
+      <p>Connectez-vous pour voir vos informations</p>
+    </ng-template>
   </div>
 
   <div *ngIf="loading" class="loading-container">
@@ -37,24 +43,27 @@
       <mat-card-content>
         <div class="stat-icon">
           <mat-icon color="accent">receipt</mat-icon>
-</div>
-<div class="stat-info">
-<h3>{{ stats.totalInvoices }}</h3>
-<p>Factures</p>
-</div>
-</mat-card-content>
-</mat-card>
-<mat-card class="stat-card">
-  <mat-card-content>
-    <div class="stat-icon">
-      <mat-icon style="color: #4caf50;">meeting_room</mat-icon>
-    </div>
-    <div class="stat-info">
-      <h3>{{ stats.availableRooms }}</h3>
-      <p>Chambres disponibles</p>
-    </div>
-  </mat-card-content>
-</mat-card></div>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.totalInvoices }}</h3>
+          <p>Factures</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon style="color: #4caf50;">meeting_room</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.availableRooms }}</h3>
+          <p>Chambres disponibles</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
   <div class="quick-actions">
     <h2>Actions rapides</h2>
     <div class="actions-grid">

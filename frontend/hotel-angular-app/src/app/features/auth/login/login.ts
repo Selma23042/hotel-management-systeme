@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth';
 
 // Angular Material
@@ -32,18 +32,21 @@ export class LoginComponent implements OnInit {
   loading = false;
   errorMessage = '';
   hidePassword = true;
+  returnUrl: string = '/dashboard';  // ✅ Ajouté
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute  // ✅ Ajouté
   ) {}
 
   ngOnInit(): void {
     this.initForm();
+    // ✅ Récupérer l'URL de retour
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
   }
 
-  // Getter pour accéder facilement aux contrôles
   get f() {
     return this.loginForm.controls;
   }
@@ -65,7 +68,8 @@ export class LoginComponent implements OnInit {
 
     this.authService.login(this.loginForm.value).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        // ✅ Rediriger vers l'URL de retour au lieu de toujours /dashboard
+        this.router.navigate([this.returnUrl]);
       },
       error: (error) => {
         this.errorMessage = error.error.message || 'Email ou mot de passe incorrect';

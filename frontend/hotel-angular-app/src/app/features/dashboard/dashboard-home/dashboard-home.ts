@@ -31,7 +31,7 @@ export class DashboardHomeComponent implements OnInit {
   stats: any = {
     totalBookings: 0,
     pendingBookings: 0,
-    totalRevenue: 0,
+    totalInvoices: 0,  // Ajouté ici
     availableRooms: 0
   };
   loading = true;
@@ -51,7 +51,7 @@ export class DashboardHomeComponent implements OnInit {
       this.stats = {
         totalBookings: 156,
         pendingBookings: 12,
-        totalRevenue: 45600,
+        totalInvoices: 89,  // Ajouté ici aussi
         availableRooms: 24
       };
       this.loading = false;

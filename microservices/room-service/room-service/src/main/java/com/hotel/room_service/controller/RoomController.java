@@ -21,22 +21,22 @@ public class RoomController {
     
     private final RoomService roomService;
     
-    @PostMapping
-    public ResponseEntity<RoomResponseDTO> createRoom(@Valid @RequestBody RoomRequestDTO request) {
-        RoomResponseDTO response = roomService.createRoom(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    // ✅ 1. METTRE TOUS LES ENDPOINTS SPÉCIFIQUES EN PREMIER
+    
+    @GetMapping("/count")
+    public ResponseEntity<Long> countAllRooms() {
+        return ResponseEntity.ok(roomService.countAll());
     }
     
-    @GetMapping
-    public ResponseEntity<List<RoomResponseDTO>> getAllRooms() {
-        List<RoomResponseDTO> rooms = roomService.getAllRooms();
-        return ResponseEntity.ok(rooms);
+    @GetMapping("/count/available")
+    public ResponseEntity<Long> countAvailableRooms() {
+        return ResponseEntity.ok(roomService.countAvailable());
     }
     
-    @GetMapping("/{id}")
-    public ResponseEntity<RoomResponseDTO> getRoomById(@PathVariable Long id) {
-        RoomResponseDTO room = roomService.getRoomById(id);
-        return ResponseEntity.ok(room);
+    @GetMapping("/count/status/{status}")
+    public ResponseEntity<Long> countRoomsByStatus(@PathVariable String status) {
+        Long count = roomService.countByStatus(status.toUpperCase());
+        return ResponseEntity.ok(count);
     }
     
     @GetMapping("/number/{roomNumber}")
@@ -71,6 +71,26 @@ public class RoomController {
         return ResponseEntity.ok(rooms);
     }
     
+    @GetMapping
+    public ResponseEntity<List<RoomResponseDTO>> getAllRooms() {
+        List<RoomResponseDTO> rooms = roomService.getAllRooms();
+        return ResponseEntity.ok(rooms);
+    }
+    
+    // ✅ 2. METTRE L'ENDPOINT GÉNÉRIQUE /{id} À LA FIN
+    @GetMapping("/{id}")
+    public ResponseEntity<RoomResponseDTO> getRoomById(@PathVariable Long id) {
+        RoomResponseDTO room = roomService.getRoomById(id);
+        return ResponseEntity.ok(room);
+    }
+    
+    // ✅ 3. LES AUTRES MÉTHODES (POST, PUT, DELETE) APRÈS
+    @PostMapping
+    public ResponseEntity<RoomResponseDTO> createRoom(@Valid @RequestBody RoomRequestDTO request) {
+        RoomResponseDTO response = roomService.createRoom(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+    
     @PutMapping("/{id}")
     public ResponseEntity<RoomResponseDTO> updateRoom(
             @PathVariable Long id,
@@ -79,7 +99,7 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
     
-    @PatchMapping("/{id}/status")
+    @PutMapping("/{id}/status")
     public ResponseEntity<RoomResponseDTO> updateRoomStatus(
             @PathVariable Long id,
             @RequestParam RoomStatus status) {

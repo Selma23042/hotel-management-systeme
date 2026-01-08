@@ -80,7 +80,7 @@ services:
 
   # ==================== MESSAGE BROKER ====================
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3.13-management-alpine
     container_name: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: admin
@@ -93,32 +93,34 @@ services:
     networks:
       - hotel-network
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # ==================== INFRASTRUCTURE ====================
   eureka-server:
     build:
-      context: ../microservices/eureka-server
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: microservices/eureka-server/eureka-serve/Dockerfile
     container_name: eureka-server
     ports:
       - "8761:8761"
     networks:
       - hotel-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 40s
+    restart: unless-stopped
 
   api-gateway:
     build:
-      context: ../microservices/api-gateway
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: microservices/api-gateway/api-gateway/Dockerfile
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -134,8 +136,8 @@ services:
   # ==================== MICROSERVICES ====================
   room-service:
     build:
-      context: ../microservices/room-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: microservices/room-service/room-service/Dockerfile
     container_name: room-service
     ports:
       - "8081:8081"
@@ -155,8 +157,8 @@ services:
 
   customer-service:
     build:
-      context: ../microservices/customer-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: microservices/customer-service/customer-service/Dockerfile
     container_name: customer-service
     ports:
       - "8083:8083"
@@ -176,8 +178,8 @@ services:
 
   booking-service:
     build:
-      context: ../microservices/booking-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: microservices/booking-service/booking-service/Dockerfile
     container_name: booking-service
     ports:
       - "8082:8082"
@@ -207,8 +209,8 @@ services:
 
   billing-service:
     build:
-      context: ../microservices/billing-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: microservices/billing-service/billing-service/Dockerfile
     container_name: billing-service
     ports:
       - "8084:8084"
@@ -235,8 +237,8 @@ services:
   # ==================== FRONTEND ====================
   frontend:
     build:
-      context: ../frontend/hotel-angular-app
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: frontend/hotel-angular-app/Dockerfile
     container_name: frontend
     ports:
       - "4200:80"
@@ -244,6 +246,111 @@ services:
       - hotel-network
     depends_on:
       - api-gateway
+    restart: unless-stopped
+
+  # ==================== MONITORING ====================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - hotel-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3000:3000"
+    networks:
+      - hotel-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ../monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - hotel-network
+    restart: unless-stopped
+
+  # ==================== ELK STACK ====================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - hotel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    volumes:
+      - ../monitoring/elk/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ../monitoring/elk/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+    ports:
+      - "5000:5000"
+      - "9600:9600"
+    networks:
+      - hotel-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - hotel-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     restart: unless-stopped
 
 # ==================== NETWORKS ====================
@@ -258,3 +365,7 @@ volumes:
   customer-data:
   billing-data:
   rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  elasticsearch-data:

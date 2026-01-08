@@ -1,0 +1,329 @@
+.invoice-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease;
+}
+
+.invoice-detail-content {
+  .page-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    
+    .header-content {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      .header-actions {
+        display: flex;
+        gap: 1rem;
+        
+        button {
+          background: white;
+          color: #667eea;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          
+          &:hover {
+            transform: translateY(-2px);
+          }
+        }
+      }
+    }
+  }
+}
+
+.invoice-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  padding: 3rem;
+  margin-bottom: 2rem;
+  
+  .invoice-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    
+    .company-info {
+      h2 {
+        margin: 0 0 0.5rem 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-size: 1.75rem;
+      }
+      
+      p {
+        margin: 0.25rem 0;
+        color: #64748b;
+        font-size: 0.9rem;
+      }
+    }
+    
+    .invoice-info {
+      text-align: right;
+      
+      h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.5rem;
+        color: #1e293b;
+      }
+      
+      p {
+        margin: 0.25rem 0;
+        color: #64748b;
+      }
+    }
+  }
+  
+  .customer-section,
+  .stay-details {
+    margin: 2rem 0;
+    
+    h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    
+    p {
+      margin: 0.5rem 0;
+      color: #64748b;
+    }
+  }
+  
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    
+    .detail-item {
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      
+      mat-icon {
+        color: #667eea;
+      }
+      
+      strong {
+        display: block;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+      }
+      
+      p {
+        margin: 0;
+        color: #64748b;
+      }
+    }
+  }
+  
+  .charges-section {
+    margin: 2rem 0;
+    
+    h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    
+    .charges-table {
+      width: 100%;
+      border-collapse: collapse;
+      
+      thead {
+        background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+        
+        th {
+          padding: 1rem;
+          text-align: left;
+          font-weight: 600;
+          color: #1e293b;
+          
+          &.text-right {
+            text-align: right;
+          }
+        }
+      }
+      
+      tbody {
+        td {
+          padding: 1rem;
+          border-bottom: 1px solid #f1f5f9;
+          color: #64748b;
+          
+          &.text-center {
+            text-align: center;
+          }
+          
+          &.text-right {
+            text-align: right;
+            font-weight: 600;
+          }
+        }
+      }
+    }
+  }
+  
+  .totals-section {
+    margin: 2rem 0;
+    max-width: 400px;
+    margin-left: auto;
+    
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      color: #64748b;
+      
+      &.grand-total {
+        padding-top: 1rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        
+        span:last-child {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+      }
+    }
+  }
+  
+  .payment-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #d1fae520 0%, #d1fae520 100%);
+    border-radius: 12px;
+    border-left: 4px solid #059669;
+    margin: 2rem 0;
+    
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+    
+    strong {
+      display: block;
+      color: #059669;
+      margin-bottom: 0.25rem;
+    }
+    
+    p {
+      margin: 0.25rem 0;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+  }
+  
+  .payment-actions {
+    margin: 2rem 0;
+    
+    h4 {
+      margin: 1rem 0;
+      font-size: 1.1rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    
+    .payment-methods {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      
+      button {
+        flex: 1;
+        min-width: 150px;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        mat-icon {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+  }
+  
+  .invoice-footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid #f1f5f9;
+    
+    .thank-you {
+      font-size: 1.25rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0 0 0.5rem 0;
+    }
+    
+    .footer-note {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      margin: 0;
+    }
+  }
+}
+
+.additional-actions {
+  text-align: center;
+  
+  button {
+    min-width: 200px;
+  }
+}
+
+@media print {
+  .page-header,
+  .additional-actions,
+  .header-actions {
+    display: none !important;
+  }
+  
+  .invoice-card {
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+  }
+}
+
+@media (max-width: 768px) {
+  .invoice-card {
+    padding: 1.5rem;
+    
+    .invoice-header {
+      flex-direction: column;
+      gap: 1.5rem;
+      
+      .invoice-info {
+        text-align: left;
+      }
+    }
+    
+    .details-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .payment-methods {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

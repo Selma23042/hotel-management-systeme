@@ -1,0 +1,35 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'email-notifications'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'email-notifications'
+      continue: true
+    - match:
+        severity: warning
+      receiver: 'email-notifications'
+
+receivers:
+  - name: 'email-notifications'
+    email_configs:
+      - to: 'admin@hotel-management.com'
+        from: 'alertmanager@hotel-management.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'your-email@gmail.com'
+        auth_password: 'your-app-password'
+        headers:
+          Subject: '🚨 Hotel Management Alert: {{ .GroupLabels.alertname }}'
+
+  - name: 'slack-notifications'
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'

@@ -24,4 +24,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
     
     boolean existsByBookingId(Long bookingId);
+    long countByStatus(InvoiceStatus status);
 }

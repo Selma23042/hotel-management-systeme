@@ -9,7 +9,12 @@
     </div>
   </div>
 
-  <div class="booking-content">
+  <div *ngIf="loading && !selectedRoom" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Chargement des informations...</p>
+  </div>
+
+  <div *ngIf="!loading && selectedRoom" class="booking-content">
     <div class="booking-form-section">
       <mat-card>
         <mat-card-header>
@@ -18,6 +23,7 @@
         
         <mat-card-content>
           <div *ngIf="errorMessage" class="error-message">
+            <mat-icon>error</mat-icon>
             {{ errorMessage }}
           </div>
 
@@ -29,10 +35,13 @@
                 [matDatepicker]="checkInPicker"
                 formControlName="checkInDate"
                 [min]="minDate"
+                placeholder="Sélectionnez la date d'arrivée"
               >
               <mat-datepicker-toggle matSuffix [for]="checkInPicker"></mat-datepicker-toggle>
               <mat-datepicker #checkInPicker></mat-datepicker>
-              <mat-error>La date d'arrivée est requise</mat-error>
+              <mat-error *ngIf="bookingForm.get('checkInDate')?.hasError('required')">
+                La date d'arrivée est requise
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -42,10 +51,13 @@
                 [matDatepicker]="checkOutPicker"
                 formControlName="checkOutDate"
                 [min]="minDate"
+                placeholder="Sélectionnez la date de départ"
               >
               <mat-datepicker-toggle matSuffix [for]="checkOutPicker"></mat-datepicker-toggle>
               <mat-datepicker #checkOutPicker></mat-datepicker>
-              <mat-error>La date de départ est requise</mat-error>
+              <mat-error *ngIf="bookingForm.get('checkOutDate')?.hasError('required')">
+                La date de départ est requise
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -55,9 +67,17 @@
                 type="number"
                 formControlName="numberOfGuests"
                 min="1"
+                [max]="selectedRoom.capacity"
+                placeholder="Nombre de personnes"
               >
               <mat-icon matPrefix>people</mat-icon>
-              <mat-error>Le nombre de personnes est requis</mat-error>
+              <mat-hint>Capacité maximale: {{ selectedRoom.capacity }} personne(s)</mat-hint>
+              <mat-error *ngIf="bookingForm.get('numberOfGuests')?.hasError('required')">
+                Le nombre de personnes est requis
+              </mat-error>
+              <mat-error *ngIf="bookingForm.get('numberOfGuests')?.hasError('min')">
+                Minimum 1 personne
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -66,25 +86,28 @@
                 matInput 
                 formControlName="specialRequests"
                 rows="4"
-                placeholder="Ex: Chambre avec vue sur mer, lit bébé..."
+                placeholder="Ex: Chambre avec vue sur mer, lit bébé, arrivée tardive..."
               ></textarea>
             </mat-form-field>
 
             <div class="form-actions">
               <button 
-                mat-raised-button 
+                mat-stroked-button 
                 type="button"
                 routerLink="/rooms"
+                [disabled]="loading"
               >
+                <mat-icon>close</mat-icon>
                 Annuler
               </button>
               <button 
                 mat-raised-button 
                 color="primary"
                 type="submit"
-                [disabled]="loading || bookingForm.invalid"
+                [disabled]="loading || bookingForm.invalid || totalPrice === 0"
               >
-                <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+                <mat-spinner *ngIf="loading" diameter="20" class="button-spinner"></mat-spinner>
+                <mat-icon *ngIf="!loading">check_circle</mat-icon>
                 <span *ngIf="!loading">Confirmer la réservation</span>
               </button>
             </div>
@@ -93,38 +116,85 @@
       </mat-card>
     </div>
 
-    <div class="booking-summary-section" *ngIf="selectedRoom">
-      <mat-card class="summary-card">
+    <div class="booking-summary-section">
+      <mat-card class="summary-card sticky">
         <mat-card-header>
-          <mat-card-title>Résumé</mat-card-title>
+          <mat-card-title>
+            <mat-icon>receipt</mat-icon>
+            Résumé
+          </mat-card-title>
         </mat-card-header>
         
         <mat-card-content>
+          <!-- Infos chambre -->
           <div class="room-info">
             <img 
               [src]="selectedRoom.imageUrl || 'assets/default-room.jpg'"
               [alt]="'Chambre ' + selectedRoom.roomNumber"
+              (error)="$any($event.target).src='assets/default-room.jpg'"
             >
-            <h3>Chambre {{ selectedRoom.roomNumber }}</h3>
-            <p>{{ selectedRoom.roomType }}</p>
+            <div class="room-details">
+              <h3>Chambre {{ selectedRoom.roomNumber }}</h3>
+              <p class="room-type">{{ getRoomTypeLabel(selectedRoom.roomType) }}</p>
+              <div class="room-features">
+                <span>
+                  <mat-icon>people</mat-icon>
+                  {{ selectedRoom.capacity }} pers.
+                </span>
+                <span>
+                  <mat-icon>layers</mat-icon>
+                  Étage {{ selectedRoom.floor }}
+                </span>
+              </div>
+            </div>
           </div>
 
           <mat-divider></mat-divider>
 
+          <!-- Calcul du prix -->
           <div class="price-details">
             <div class="price-line">
               <span>Prix par nuit</span>
               <span class="price">{{ selectedRoom.pricePerNight | number:'1.2-2' }} DT</span>
             </div>
+            
+            <div class="price-line" *ngIf="numberOfNights > 0">
+              <span>Nombre de nuits</span>
+              <span class="price">{{ numberOfNights }} nuit(s)</span>
+            </div>
+
+            <div class="price-line" *ngIf="numberOfNights > 0">
+              <span>Calcul</span>
+              <span class="price">{{ numberOfNights }} × {{ selectedRoom.pricePerNight | number:'1.2-2' }} DT</span>
+            </div>
+
+            <mat-divider *ngIf="numberOfNights > 0"></mat-divider>
+
             <div class="price-line total">
-              <span>Total</span>
-              <span class="price">{{ calculateTotalPrice() | number:'1.2-2' }} DT</span>
+              <span><strong>Total</strong></span>
+              <span class="price total-price">
+                <strong *ngIf="totalPrice > 0">{{ totalPrice | number:'1.2-2' }} DT</strong>
+                <strong *ngIf="totalPrice === 0" style="color: #999;">Sélectionnez les dates</strong>
+              </span>
             </div>
           </div>
 
+          <!-- Info paiement -->
           <div class="info-box">
             <mat-icon>info</mat-icon>
-            <p>Le paiement sera effectué à l'hôtel lors de votre arrivée</p>
+            <div>
+              <strong>Paiement à l'hôtel</strong>
+              <p>Le paiement sera effectué lors de votre arrivée</p>
+            </div>
+          </div>
+
+          <!-- Politique d'annulation -->
+          <div class="policy-box">
+            <mat-icon>event_busy</mat-icon>
+            <div>
+              <strong>Annulation gratuite</strong>
+              <p>Vous pouvez annuler jusqu'à 24h avant l'arrivée</p>
+            </div>
           </div>
         </mat-card-content>
       </mat-card>

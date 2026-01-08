@@ -1,0 +1,63 @@
+groups:
+  - name: hotel_management_alerts
+    interval: 30s
+    rules:
+      # Service Down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute."
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: system_cpu_usage > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.application }}"
+          description: "CPU usage is above 80% for {{ $labels.application }}"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.application }}"
+          description: "Memory usage is above 90% for {{ $labels.application }}"
+
+      # High Response Time
+      - alert: HighResponseTime
+        expr: http_server_requests_seconds_sum / http_server_requests_seconds_count > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time on {{ $labels.application }}"
+          description: "Average response time is above 1 second"
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on {{ $labels.application }}"
+          description: "Error rate is above 5% for {{ $labels.application }}"
+
+      # Database Connection Pool
+      - alert: LowDatabaseConnections
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low database connection pool on {{ $labels.application }}"
+          description: "Database connection pool usage is above 80%"

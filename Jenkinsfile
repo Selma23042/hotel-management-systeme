@@ -9,9 +9,34 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'hotel-management'
+        JAVA_HOME = 'C:\\Program Files\\java\\jdk-17'
+        MAVEN_HOME = 'C:\\apache-maven-3.9.9'
+        PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
     }
     
     stages {
+        stage('Verify Environment') {
+            steps {
+                echo '🔍 Verifying environment...'
+                bat '''
+                    echo Java version:
+                    java -version
+                    echo.
+                    echo Maven version:
+                    mvn -version
+                    echo.
+                    echo Docker version:
+                    docker --version
+                    echo.
+                    echo Node version:
+                    node --version
+                    echo.
+                    echo JAVA_HOME: %JAVA_HOME%
+                    echo MAVEN_HOME: %MAVEN_HOME%
+                '''
+            }
+        }
+        
         stage('Checkout') {
             steps {
                 echo '📥 Cloning repository...'
@@ -259,7 +284,7 @@ pipeline {
     post {
         always {
             echo '🧹 Cleaning up...'
-            bat 'docker system prune -f --volumes=false'
+            bat 'docker system prune -f --volumes=false || echo "Cleanup skipped"'
         }
         success {
             echo '''

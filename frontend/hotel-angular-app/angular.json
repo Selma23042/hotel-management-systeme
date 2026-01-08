@@ -21,7 +21,12 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "dist/hotel-angular-app",
+            "index": "src/index.html",
             "browser": "src/main.ts",
+            "polyfills": [
+              "zone.js"
+            ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -33,11 +38,7 @@
             "styles": [
               "src/styles.scss"
             ],
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            }
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -66,8 +67,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-  "proxyConfig": "proxy.conf.json"
-},
+            "proxyConfig": "proxy.conf.json"
+          },
           "configurations": {
             "production": {
               "buildTarget": "hotel-angular-app:build:production"

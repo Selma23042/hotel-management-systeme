@@ -1,33 +1,34 @@
 # Stage 1: Build
-FROM node:18-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copier les fichiers package
-COPY package*.json ./
+# Copier les fichiers de dépendances
+COPY frontend/hotel-angular-app/package*.json ./
 
 # Installer les dépendances
 RUN npm ci
 
 # Copier le code source
-COPY . .
+COPY frontend/hotel-angular-app/ .
 
-# Build pour production
-RUN npm run build --prod
+# Build de production
+RUN npm run build -- --configuration production
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
-# Copier la configuration Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copier les fichiers buildés
+# Copier les fichiers buildés (sans SSR, pas de sous-dossier browser)
 COPY --from=build /app/dist/hotel-angular-app /usr/share/nginx/html
 
-# Exposer le port
+# Copier la configuration nginx
+COPY frontend/hotel-angular-app/nginx.conf /etc/nginx/nginx.conf
+
+# Exposer le port 80
 EXPOSE 80
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:80 || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
+# Démarrer nginx
 CMD ["nginx", "-g", "daemon off;"]

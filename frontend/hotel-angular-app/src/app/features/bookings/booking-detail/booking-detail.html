@@ -1,1 +1,209 @@
-<p>booking-detail works!</p>
+<div class="booking-detail-container">
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!isLoading && booking" class="booking-detail-content">
+    <!-- Header -->
+    <div class="page-header">
+      <button mat-icon-button routerLink="/bookings">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1>Réservation #{{ booking.id }}</h1>
+        <span class="status-badge" [ngClass]="getStatusColor(booking.status)">
+          {{ getStatusLabel(booking.status) }}
+        </span>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <!-- Informations de réservation -->
+      <mat-card class="booking-info-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>calendar_today</mat-icon>
+            Informations de séjour
+          </mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div class="info-section">
+            <div class="info-row">
+              <mat-icon color="primary">login</mat-icon>
+              <div>
+                <strong>Arrivée</strong>
+                <p>{{ booking.checkInDate | date:'EEEE dd MMMM yyyy':'':'fr' }}</p>
+              </div>
+            </div>
+
+            <div class="info-row">
+              <mat-icon color="primary">logout</mat-icon>
+              <div>
+                <strong>Départ</strong>
+                <p>{{ booking.checkOutDate | date:'EEEE dd MMMM yyyy':'':'fr' }}</p>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="info-row">
+              <mat-icon color="primary">people</mat-icon>
+              <div>
+                <strong>Nombre de personnes</strong>
+                <p>{{ booking.numberOfGuests }} personne(s)</p>
+              </div>
+            </div>
+
+            <div class="info-row">
+              <mat-icon color="primary">hotel</mat-icon>
+              <div>
+                <strong>Chambre</strong>
+                <p>{{ booking.roomNumber }}</p>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="info-row" *ngIf="booking.specialRequests">
+              <mat-icon color="primary">notes</mat-icon>
+              <div>
+                <strong>Demandes spéciales</strong>
+                <p>{{ booking.specialRequests }}</p>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Client et paiement -->
+      <mat-card class="payment-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>person</mat-icon>
+            Client
+          </mat-card-title>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <div class="client-info">
+            <h3>{{ booking.customerName }}</h3>
+            <p class="booking-date">
+              <mat-icon>access_time</mat-icon>
+              Réservé le {{ booking.createdAt | date:'dd/MM/yyyy à HH:mm' }}
+            </p>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <div class="price-breakdown">
+            <h4>Détails du prix</h4>
+            
+            <div class="price-line">
+              <span>Prix total</span>
+              <span class="price">{{ booking.totalPrice | number:'1.2-2' }} DT</span>
+            </div>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Actions -->
+          <div class="action-buttons">
+            <button 
+              mat-raised-button 
+              color="primary"
+              *ngIf="booking.status === 'PENDING'"
+              (click)="confirmBooking()"
+            >
+              <mat-icon>check_circle</mat-icon>
+              Confirmer
+            </button>
+
+            <button 
+              mat-stroked-button 
+              color="warn"
+              *ngIf="booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED'"
+              (click)="cancelBooking()"
+            >
+              <mat-icon>cancel</mat-icon>
+              Annuler
+            </button>
+
+            <button 
+              mat-raised-button 
+              color="accent"
+              *ngIf="booking.status === 'CONFIRMED'"
+              (click)="completeBooking()"
+            >
+              <mat-icon>done_all</mat-icon>
+              Terminer
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Timeline -->
+    <mat-card class="timeline-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>timeline</mat-icon>
+          Historique
+        </mat-card-title>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-icon">
+              <mat-icon>add_circle</mat-icon>
+            </div>
+            <div class="timeline-content">
+              <strong>Réservation créée</strong>
+              <p>{{ booking.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+            </div>
+          </div>
+
+          <div class="timeline-item" *ngIf="booking.status === 'CONFIRMED' || booking.status === 'COMPLETED'">
+            <div class="timeline-icon confirmed">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="timeline-content">
+              <strong>Réservation confirmée</strong>
+              <p>{{ booking.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+            </div>
+          </div>
+
+          <div class="timeline-item" *ngIf="booking.status === 'COMPLETED'">
+            <div class="timeline-icon completed">
+              <mat-icon>done_all</mat-icon>
+            </div>
+            <div class="timeline-content">
+              <strong>Séjour terminé</strong>
+              <p>{{ booking.checkOutDate | date:'dd/MM/yyyy' }}</p>
+            </div>
+          </div>
+
+          <div class="timeline-item" *ngIf="booking.status === 'CANCELLED'">
+            <div class="timeline-icon cancelled">
+              <mat-icon>cancel</mat-icon>
+            </div>
+            <div class="timeline-content">
+              <strong>Réservation annulée</strong>
+              <p>{{ booking.createdAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="!isLoading && !booking" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <h2>Réservation introuvable</h2>
+    <button mat-raised-button color="primary" routerLink="/bookings">
+      Retour à la liste
+    </button>
+  </div>
+</div>

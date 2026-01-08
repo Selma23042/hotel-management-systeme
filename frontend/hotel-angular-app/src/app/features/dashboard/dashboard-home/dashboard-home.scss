@@ -1,90 +1,190 @@
 .dashboard-home {
-  max-width: 1200px;
+  padding: 2rem;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.welcome-section {
-  margin-bottom: 32px;
-  
+.dashboard-header {
+  margin-bottom: 2rem;
+
   h1 {
-    font-size: 32px;
+    font-size: 2rem;
     font-weight: 600;
-    margin: 0 0 8px 0;
-    color: #333;
+    margin-bottom: 0.5rem;
+    color: #1a202c;
   }
-  
+
   p {
-    font-size: 16px;
-    color: #666;
-    margin: 0;
+    color: #718096;
+    font-size: 1rem;
   }
 }
 
+// Loading
 .loading-container {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 60px 0;
+  padding: 4rem 2rem;
+  gap: 1.5rem;
+
+  p {
+    color: #718096;
+    font-size: 1rem;
+  }
 }
 
+// Error
+.error-container {
+  margin: 2rem 0;
+
+  .error-card {
+    mat-card-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem;
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+      }
+
+      p {
+        text-align: center;
+        color: #e53e3e;
+        font-weight: 500;
+        margin: 0;
+      }
+
+      button {
+        margin-top: 0.5rem;
+      }
+    }
+  }
+}
+
+// Stats Grid
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
 }
 
 .stat-card {
+  cursor: default;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+
   mat-card-content {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 24px !important;
+    gap: 1rem;
+    padding: 1.5rem !important;
   }
-  
+
   .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
     mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: white;
     }
   }
-  
+
   .stat-info {
-    h3 {
-      font-size: 36px;
-      font-weight: 600;
-      margin: 0 0 4px 0;
-      color: #333;
+    flex: 1;
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem 0;
+      color: #1a202c;
     }
-    
-    p {
-      font-size: 14px;
-      color: #666;
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: #718096;
       margin: 0;
     }
   }
+
+  // Couleurs spécifiques par carte
+  &.booking-card .stat-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  &.pending-card .stat-icon {
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  }
+
+  &.invoice-card .stat-icon {
+    background: linear-gradient(135deg, #ed64a6 0%, #d53f8c 100%);
+  }
+
+  &.room-card .stat-icon {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  }
 }
 
-.quick-actions {
+// Actions Section
+.actions-section {
+  margin-top: 3rem;
+
   h2 {
-    font-size: 24px;
-    font-weight: 500;
-    margin: 0 0 20px 0;
-    color: #333;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: #1a202c;
   }
 }
 
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  
-  button {
+  gap: 1rem;
+
+  .action-btn {
     height: 56px;
-    font-size: 16px;
-    
+    font-size: 1rem;
+
     mat-icon {
-      margin-right: 8px;
+      margin-right: 0.5rem;
     }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .dashboard-home {
+    padding: 1rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.5rem;
   }
 }

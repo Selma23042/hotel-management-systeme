@@ -35,4 +35,7 @@ export class InvoiceService {
   cancelInvoice(id: number): Observable<Invoice> {
     return this.http.patch<Invoice>(`${this.apiUrl}/${id}/cancel`, null);
   }
+  createInvoiceFromBooking(bookingId: number): Observable<Invoice> {
+  return this.http.post<Invoice>(`${this.apiUrl}/from-booking/${bookingId}`, {});
+}
 }

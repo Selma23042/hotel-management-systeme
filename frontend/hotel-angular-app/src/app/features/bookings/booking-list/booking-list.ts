@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
 // Angular Material
@@ -8,44 +8,49 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatOptionModule } from '@angular/material/core';
 import { MatTableModule } from '@angular/material/table';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+// Services et modèles
+import { BookingService } from '../../../core/services/booking';
+import { Booking } from '../../../core/models/booking.model';
 
 @Component({
   selector: 'app-booking-list',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
     FormsModule,
     RouterModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,
-    MatInputModule,
     MatSelectModule,
-    MatOptionModule,
     MatTableModule,
     MatMenuModule,
-    MatDividerModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSnackBarModule
   ],
-  providers: [DatePipe],
+  providers: [DatePipe, DecimalPipe],
   templateUrl: './booking-list.html',
   styleUrls: ['./booking-list.scss']
 })
 export class BookingListComponent implements OnInit {
-  bookings: any[] = [];
-  filteredBookings: any[] = [];
-  loading = false;
+  bookings: Booking[] = [];
+  filteredBookings: Booking[] = [];
+  loading = true;
   selectedStatus: string = 'ALL';
-  displayedColumns: string[] = ['id', 'guestName', 'room', 'dates', 'status', 'actions'];
+
+  displayedColumns: string[] = ['roomNumber', 'dates', 'guests', 'totalPrice', 'status', 'actions'];
+
+  constructor(
+    private bookingService: BookingService,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit(): void {
     this.loadBookings();
@@ -53,12 +58,22 @@ export class BookingListComponent implements OnInit {
 
   loadBookings(): void {
     this.loading = true;
-    // Implémentez votre logique ici
-    setTimeout(() => {
-      this.bookings = [];
-      this.applyFilter();
-      this.loading = false;
-    }, 1000);
+    
+    // Charger les réservations du client connecté
+    const customerId = 1; // TODO: Récupérer depuis le service d'authentification
+    
+    this.bookingService.getBookingsByCustomer(customerId).subscribe({
+      next: (bookings) => {
+        this.bookings = bookings;
+        this.applyFilter();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Erreur chargement réservations:', error);
+        this.showMessage('Erreur lors du chargement des réservations');
+        this.loading = false;
+      }
+    });
   }
 
   applyFilter(): void {
@@ -75,30 +90,56 @@ export class BookingListComponent implements OnInit {
     this.applyFilter();
   }
 
-  getStatusColor(status: string): string {
-    const colors: { [key: string]: string } = {
-      'CONFIRMED': 'status-success',
-      'PENDING': 'status-warn',
-      'CANCELLED': 'status-error',
-      'COMPLETED': 'status-accent'
-    };
-    return colors[status] || 'status-primary';
+  cancelBooking(booking: Booking): void {
+    if (booking.status === 'CANCELLED' || booking.status === 'COMPLETED') {
+      this.showMessage('Cette réservation ne peut pas être annulée');
+      return;
+    }
+
+    if (confirm(`Êtes-vous sûr de vouloir annuler la réservation #${booking.id} ?`)) {
+      this.bookingService.cancelBooking(booking.id).subscribe({
+        next: (updatedBooking) => {
+          // Mettre à jour la réservation dans la liste
+          const index = this.bookings.findIndex(b => b.id === booking.id);
+          if (index !== -1) {
+            this.bookings[index] = updatedBooking;
+            this.applyFilter();
+          }
+          this.showMessage('Réservation annulée avec succès');
+        },
+        error: (error) => {
+          console.error('Erreur annulation:', error);
+          this.showMessage('Erreur lors de l\'annulation');
+        }
+      });
+    }
   }
 
   getStatusLabel(status: string): string {
     const labels: { [key: string]: string } = {
-      'CONFIRMED': 'Confirmée',
       'PENDING': 'En attente',
-      'CANCELLED': 'Annulée',
-      'COMPLETED': 'Terminée'
+      'CONFIRMED': 'Confirmée',
+      'COMPLETED': 'Terminée',
+      'CANCELLED': 'Annulée'
     };
     return labels[status] || status;
   }
 
-  cancelBooking(booking: any): void {
-    if (confirm('Voulez-vous vraiment annuler cette réservation ?')) {
-      // Logique d'annulation
-      console.log('Annulation de la réservation:', booking);
-    }
+  getStatusColor(status: string): string {
+    const colors: { [key: string]: string } = {
+      'PENDING': 'status-warn',
+      'CONFIRMED': 'status-success',
+      'COMPLETED': 'status-accent',
+      'CANCELLED': 'status-error'
+    };
+    return colors[status] || 'status-primary';
+  }
+
+  private showMessage(message: string): void {
+    this.snackBar.open(message, 'Fermer', {
+      duration: 3000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top'
+    });
   }
 }

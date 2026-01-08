@@ -5,6 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -18,6 +19,6 @@ public interface RoomServiceClient {
     @GetMapping("/api/rooms/available/{type}")
     List<RoomDTO> getAvailableRoomsByType(@PathVariable("type") String type);
     
-    @PatchMapping("/api/rooms/{id}/status")
+       @PutMapping("/api/rooms/{id}/status")  // ✅ Changé de @PatchMapping à @PutMapping
     RoomDTO updateRoomStatus(@PathVariable("id") Long id, @RequestParam("status") String status);
 }

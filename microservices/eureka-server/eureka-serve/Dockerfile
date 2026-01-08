@@ -1,36 +1,37 @@
 # Stage 1: Build
-FROM maven:3.8.6-openjdk-17-slim AS build
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
-# Copier le pom parent
-COPY ../../pom.xml ./pom.xml
+# Copier le pom parent et l'installer dans le repository Maven local
+COPY hotel-parent/pom.xml ./parent-pom.xml
+RUN mvn install:install-file \
+    -Dfile=./parent-pom.xml \
+    -DgroupId=com.hotel \
+    -DartifactId=hotel-parent \
+    -Dversion=0.0.1-SNAPSHOT \
+    -Dpackaging=pom
 
-# Copier le pom du service
-COPY pom.xml ./eureka-server/pom.xml
+# Copier le pom du service (attention au chemin: eureka-server/eureka-serve/)
+COPY microservices/eureka-server/eureka-serve/pom.xml ./eureka-server/pom.xml
 
 # Copier les sources
-COPY src ./eureka-server/src
+COPY microservices/eureka-server/eureka-serve/src ./eureka-server/src
 
 # Build
 WORKDIR /app/eureka-server
 RUN mvn clean package -DskipTests
 
 # Stage 2: Run
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# Copier le jar depuis le stage build
 COPY --from=build /app/eureka-server/target/*.jar app.jar
 
-# Exposer le port
 EXPOSE 8761
 
-# Variables d'environnement
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
 
-# Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8761/actuator/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8761/actuator/health || exit 1
 
-# Démarrer l'application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

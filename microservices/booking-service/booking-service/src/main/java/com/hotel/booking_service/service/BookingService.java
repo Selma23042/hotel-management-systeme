@@ -218,31 +218,47 @@ public class BookingService {
         return convertToDTO(cancelledBooking, customer, room);
     }
     
-    public BookingResponseDTO completeBooking(Long bookingId) {
-        log.info("Completing booking: {}", bookingId);
-        
-        Booking booking = bookingRepository.findById(bookingId)
-            .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + bookingId));
-        
-        if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new InvalidBookingException("Only confirmed bookings can be completed");
-        }
-        
-        // Libérer la chambre
-        try {
-            roomServiceClient.updateRoomStatus(booking.getRoomId(), "AVAILABLE");
-        } catch (Exception e) {
-            log.error("Failed to update room status", e);
-        }
-        
-        booking.setStatus(BookingStatus.COMPLETED);
-        Booking completedBooking = bookingRepository.save(booking);
-        
-        CustomerDTO customer = customerServiceClient.getCustomerById(booking.getCustomerId());
-        RoomDTO room = roomServiceClient.getRoomById(booking.getRoomId());
-        
-        return convertToDTO(completedBooking, customer, room);
+   public BookingResponseDTO completeBooking(Long bookingId) {
+    log.info("Completing booking: {}", bookingId);
+    
+    Booking booking = bookingRepository.findById(bookingId)
+        .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + bookingId));
+    
+    if (booking.getStatus() != BookingStatus.CONFIRMED) {
+        throw new InvalidBookingException("Only confirmed bookings can be completed");
     }
+    
+    // Libérer la chambre
+    try {
+        roomServiceClient.updateRoomStatus(booking.getRoomId(), "AVAILABLE");
+    } catch (Exception e) {
+        log.error("Failed to update room status", e);
+    }
+    
+    booking.setStatus(BookingStatus.COMPLETED);
+    Booking completedBooking = bookingRepository.save(booking);
+    
+    // 🔥 AJOUTER CETTE PARTIE - Publier l'événement pour créer la facture
+    BookingEventDTO event = new BookingEventDTO(
+        completedBooking.getId(),
+        completedBooking.getCustomerId(),
+        completedBooking.getRoomId(),
+        completedBooking.getCheckInDate(),
+        completedBooking.getCheckOutDate(),
+        completedBooking.getTotalPrice(),
+        completedBooking.getStatus().name(),
+        LocalDateTime.now()
+    );
+    eventPublisher.publishBookingCompleted(event); // ou publishBookingConfirmed(event)
+    
+    log.info("Booking completed and invoice event published: {}", bookingId);
+    // 🔥 FIN DE L'AJOUT
+    
+    CustomerDTO customer = customerServiceClient.getCustomerById(booking.getCustomerId());
+    RoomDTO room = roomServiceClient.getRoomById(booking.getRoomId());
+    
+    return convertToDTO(completedBooking, customer, room);
+}
     
     private void validateBookingDates(LocalDate checkIn, LocalDate checkOut) {
         LocalDate today = LocalDate.now();
@@ -272,4 +288,11 @@ public class BookingService {
             booking.getCreatedAt()
         );
     }
+public Long countAll() {
+    return bookingRepository.count();
 }
+
+public Long countByStatus(String statusStr) {
+    BookingStatus status = BookingStatus.valueOf(statusStr);
+    return bookingRepository.countByStatus(status);
+}}

@@ -2,9 +2,9 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
-// Composants partagés
-import { NavbarComponent } from '../../../shared/components/navbar/navbar'
-import { SidebarComponent } from '../../../shared/components/sidebar/sidebar'
+// Components
+import { NavbarComponent } from '../../../shared/components/navbar/navbar';
+import { SidebarComponent } from '../../../shared/components/sidebar/sidebar';
 
 @Component({
   selector: 'app-dashboard-layout',

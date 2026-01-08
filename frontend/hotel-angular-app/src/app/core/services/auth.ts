@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface User {
   id: number;
@@ -18,7 +19,7 @@ export interface User {
 export class AuthService {
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = `${environment.apiUrl}/customers`;
   private isBrowser: boolean;
 
   constructor(
@@ -28,11 +29,18 @@ export class AuthService {
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     
-    // Initialiser currentUserSubject en toute sécurité
+    // ✅ Correction : Vérifier que userJson n'est pas null avant de parser
     let storedUser = null;
     if (this.isBrowser) {
       const userJson = localStorage.getItem('currentUser');
-      storedUser = userJson ? JSON.parse(userJson) : null;
+      if (userJson && userJson !== 'undefined') {  // ✅ Ajout de cette vérification
+        try {
+          storedUser = JSON.parse(userJson);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('currentUser');
+        }
+      }
     }
     
     this.currentUserSubject = new BehaviorSubject<User | null>(storedUser);
@@ -89,5 +97,17 @@ export class AuthService {
     }
     const token = this.getToken();
     return !!token;
+  }
+
+  // ✅ Ajout de la méthode updateProfile qui manquait
+  updateProfile(userData: Partial<User>): Observable<User> {
+    return this.http.put<User>(`${this.apiUrl}/profile`, userData).pipe(
+      tap((user: User) => {
+        if (this.isBrowser) {
+          localStorage.setItem('currentUser', JSON.stringify(user));
+        }
+        this.currentUserSubject.next(user);
+      })
+    );
   }
 }

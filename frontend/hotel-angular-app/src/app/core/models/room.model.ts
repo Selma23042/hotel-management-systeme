@@ -1,25 +1,11 @@
-export enum RoomType {
-  SINGLE = 'SINGLE',
-  DOUBLE = 'DOUBLE',
-  SUITE = 'SUITE',
-  DELUXE = 'DELUXE'
-}
-
-export enum RoomStatus {
-  AVAILABLE = 'AVAILABLE',
-  OCCUPIED = 'OCCUPIED',
-  MAINTENANCE = 'MAINTENANCE',
-  RESERVED = 'RESERVED'
-}
-
 export interface Room {
   id: number;
   roomNumber: string;
   roomType: RoomType;
   pricePerNight: number;
   status: RoomStatus;
-  floor?: number;
-  capacity?: number;
+  floor: number;
+  capacity: number;
   description?: string;
   imageUrl?: string;
   createdAt: Date;
@@ -31,8 +17,21 @@ export interface RoomRequest {
   roomType: RoomType;
   pricePerNight: number;
   status: RoomStatus;
-  floor?: number;
-  capacity?: number;
+  floor: number;
+  capacity: number;
   description?: string;
   imageUrl?: string;
+}
+
+export enum RoomType {
+  STANDARD = 'STANDARD',
+  DELUXE = 'DELUXE',
+  SUITE = 'SUITE'
+}
+
+export enum RoomStatus {
+  AVAILABLE = 'AVAILABLE',
+  OCCUPIED = 'OCCUPIED',
+  RESERVED = 'RESERVED',
+  MAINTENANCE = 'MAINTENANCE'
 }

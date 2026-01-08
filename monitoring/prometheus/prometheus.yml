@@ -1,0 +1,86 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'hotel-management-monitor'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alert_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Eureka Server
+  - job_name: 'eureka-server'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['eureka-server:8761']
+        labels:
+          application: 'eureka-server'
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+        labels:
+          application: 'api-gateway'
+
+  # Room Service
+  - job_name: 'room-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['room-service:8081']
+        labels:
+          application: 'room-service'
+
+  # Customer Service
+  - job_name: 'customer-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['customer-service:8083']
+        labels:
+          application: 'customer-service'
+
+  # Booking Service
+  - job_name: 'booking-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['booking-service:8082']
+        labels:
+          application: 'booking-service'
+
+  # Billing Service
+  - job_name: 'billing-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['billing-service:8084']
+        labels:
+          application: 'billing-service'
+
+  # PostgreSQL databases
+  - job_name: 'postgres'
+    static_configs:
+      - targets: 
+          - 'postgres-exporter:9187'
+        labels:
+          database: 'hotel-databases'
+
+  # RabbitMQ
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+        labels:
+          service: 'rabbitmq'

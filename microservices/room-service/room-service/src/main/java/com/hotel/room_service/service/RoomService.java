@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+
 import java.util.stream.Collectors;
 
 @Service
@@ -136,4 +137,17 @@ public class RoomService {
             room.getUpdatedAt()
         );
     }
+
+   public Long countAll() {
+    return roomRepository.count();
+}
+
+public Long countAvailable() {
+    return roomRepository.countByStatus(RoomStatus.AVAILABLE);
+}
+
+public Long countByStatus(String statusStr) {
+    RoomStatus status = RoomStatus.valueOf(statusStr);
+    return roomRepository.countByStatus(status);
+}
 }

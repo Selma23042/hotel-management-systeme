@@ -203,4 +203,12 @@ public class InvoiceService {
             invoice.getCreatedAt()
         );
     }
+   public Long countAll() {
+    return invoiceRepository.count();
+}
+
+public Long countByStatus(String statusStr) {
+    InvoiceStatus status = InvoiceStatus.valueOf(statusStr);
+    return invoiceRepository.countByStatus(status);
+}
 }

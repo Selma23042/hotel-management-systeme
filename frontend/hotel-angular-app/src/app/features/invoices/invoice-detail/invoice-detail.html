@@ -1,1 +1,210 @@
-<p>invoice-detail works!</p>
+<div class="invoice-detail-container">
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading && invoice" class="invoice-detail-content">
+    <!-- Header avec actions -->
+    <div class="page-header">
+      <button mat-icon-button routerLink="/invoices">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="header-content">
+        <div>
+          <h1>Facture {{ invoice.invoiceNumber }}</h1>
+          <span class="status-badge" [ngClass]="getStatusColor(invoice.status)">
+            {{ getStatusLabel(invoice.status) }}
+          </span>
+        </div>
+        <div class="header-actions">
+          <button mat-stroked-button (click)="downloadPDF()">
+            <mat-icon>download</mat-icon>
+            Télécharger PDF
+          </button>
+          <button mat-raised-button color="primary" (click)="printInvoice()">
+            <mat-icon>print</mat-icon>
+            Imprimer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Facture printable -->
+    <mat-card class="invoice-card" id="invoice-printable">
+      <!-- En-tête de la facture -->
+      <div class="invoice-header">
+        <div class="company-info">
+          <h2>HÔTEL MANAGEMENT</h2>
+          <p>123 Avenue de la République</p>
+          <p>Tunis, Tunisie</p>
+          <p>Tél: +216 71 123 456</p>
+        </div>
+        <div class="invoice-info">
+          <h3>FACTURE</h3>
+          <p><strong>N°:</strong> {{ invoice.invoiceNumber }}</p>
+          <p><strong>Date:</strong> {{ invoice.createdAt | date:'dd/MM/yyyy' }}</p>
+          <p *ngIf="invoice.paidAt"><strong>Payée le:</strong> {{ invoice.paidAt | date:'dd/MM/yyyy' }}</p>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Informations client -->
+      <div class="customer-section">
+        <h4>Client</h4>
+        <p><strong>ID Client:</strong> #{{ invoice.customerId }}</p>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Détails du séjour -->
+      <div class="stay-details">
+        <h4>Détails du séjour</h4>
+        <div class="details-grid">
+          <div class="detail-item">
+            <mat-icon>hotel</mat-icon>
+            <div>
+              <strong>Chambre</strong>
+              <p>#{{ invoice.roomId }}</p>
+            </div>
+          </div>
+          <div class="detail-item">
+            <mat-icon>calendar_today</mat-icon>
+            <div>
+              <strong>Dates</strong>
+              <p>{{ invoice.checkInDate | date:'dd/MM/yyyy' }} - {{ invoice.checkOutDate | date:'dd/MM/yyyy' }}</p>
+            </div>
+          </div>
+          <div class="detail-item">
+            <mat-icon>nights_stay</mat-icon>
+            <div>
+              <strong>Nombre de nuits</strong>
+              <p>{{ invoice.numberOfNights }}</p>
+            </div>
+          </div>
+          <div class="detail-item">
+            <mat-icon>book_online</mat-icon>
+            <div>
+              <strong>Réservation</strong>
+              <p>#{{ invoice.bookingId }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Tableau des charges -->
+      <div class="charges-section">
+        <h4>Détails des charges</h4>
+        <table class="charges-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Quantité</th>
+              <th>Prix unitaire</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Hébergement ({{ invoice.numberOfNights }} nuit(s))</td>
+              <td class="text-center">{{ invoice.numberOfNights }}</td>
+              <td>{{ (invoice.roomCharges / invoice.numberOfNights) | number:'1.2-2' }} DT</td>
+              <td class="text-right">{{ invoice.roomCharges | number:'1.2-2' }} DT</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Totaux -->
+      <div class="totals-section">
+        <div class="total-line">
+          <span>Sous-total</span>
+          <span>{{ invoice.roomCharges | number:'1.2-2' }} DT</span>
+        </div>
+        <div class="total-line">
+          <span>Taxe (10%)</span>
+          <span>{{ invoice.taxAmount | number:'1.2-2' }} DT</span>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="total-line grand-total">
+          <span>TOTAL À PAYER</span>
+          <span>{{ invoice.totalAmount | number:'1.2-2' }} DT</span>
+        </div>
+      </div>
+
+      <!-- Informations de paiement -->
+      <div class="payment-info" *ngIf="invoice.status === 'PAID'">
+        <mat-icon color="primary">check_circle</mat-icon>
+        <div>
+          <strong>Payé avec succès</strong>
+          <p>Méthode: {{ getPaymentMethodLabel(invoice.paymentMethod) }}</p>
+          <p>Date: {{ invoice.paidAt | date:'dd/MM/yyyy à HH:mm' }}</p>
+        </div>
+      </div>
+
+      <!-- Actions de paiement -->
+      <div class="payment-actions" *ngIf="invoice.status === 'PENDING'">
+        <mat-divider></mat-divider>
+        <h4>Effectuer le paiement</h4>
+        <div class="payment-methods">
+          <button 
+            mat-raised-button 
+            color="primary"
+            (click)="processPayment('CASH')"
+          >
+            <mat-icon>money</mat-icon>
+            Espèces
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            (click)="processPayment('CREDIT_CARD')"
+          >
+            <mat-icon>credit_card</mat-icon>
+            Carte bancaire
+          </button>
+          <button 
+            mat-raised-button 
+            color="primary"
+            (click)="processPayment('BANK_TRANSFER')"
+          >
+            <mat-icon>account_balance</mat-icon>
+            Virement
+          </button>
+        </div>
+      </div>
+
+      <!-- Note de bas de page -->
+      <div class="invoice-footer">
+        <p class="thank-you">Merci de votre confiance !</p>
+        <p class="footer-note">Cette facture est générée automatiquement et est valable sans signature.</p>
+      </div>
+    </mat-card>
+
+    <!-- Actions supplémentaires -->
+    <div class="additional-actions">
+      <button 
+        mat-stroked-button 
+        color="warn"
+        *ngIf="invoice.status === 'PENDING'"
+        (click)="cancelInvoice()"
+      >
+        <mat-icon>cancel</mat-icon>
+        Annuler la facture
+      </button>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="!loading && !invoice" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <h2>Facture introuvable</h2>
+    <button mat-raised-button color="primary" routerLink="/invoices">
+      Retour à la liste
+    </button>
+  </div>
+</div>

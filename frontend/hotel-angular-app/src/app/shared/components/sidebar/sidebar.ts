@@ -34,8 +34,4 @@ export class SidebarComponent {
   ];
 
   constructor(public router: Router) {}
-
-  isActive(route: string): boolean {
-    return this.router.url.startsWith(route);
-  }
 }

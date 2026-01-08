@@ -51,9 +51,39 @@ export class RoomDetailComponent implements OnInit {
         this.room = room;
         this.loading = false;
       },
-      error: () => {
+      error: (error) => {
+        console.error('Erreur chargement chambre:', error);
         this.loading = false;
       }
     });
+  }
+
+  getStatusLabel(status: string): string {
+    const labels: { [key: string]: string } = {
+      'AVAILABLE': 'Disponible',
+      'OCCUPIED': 'Occupée',
+      'RESERVED': 'Réservée',
+      'MAINTENANCE': 'Maintenance'
+    };
+    return labels[status] || status;
+  }
+
+  getStatusColor(status: string): string {
+    const colors: { [key: string]: string } = {
+      'AVAILABLE': 'status-success',
+      'OCCUPIED': 'status-warn',
+      'RESERVED': 'status-accent',
+      'MAINTENANCE': 'status-disabled'
+    };
+    return colors[status] || 'status-primary';
+  }
+
+  getRoomTypeLabel(type: string): string {
+    const labels: { [key: string]: string } = {
+      'Standard':'Standard',
+      'SUITE': 'Suite',
+      'DELUXE': 'Chambre Deluxe'
+    };
+    return labels[type] || type;
   }
 }

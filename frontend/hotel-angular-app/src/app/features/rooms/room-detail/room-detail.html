@@ -1,1 +1,127 @@
-<p>room-detail works!</p>
+<div class="room-detail-container">
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!loading && room" class="room-detail-content">
+    <!-- Header avec bouton retour -->
+    <div class="page-header">
+      <button mat-icon-button routerLink="/rooms">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1>Chambre {{ room.roomNumber }}</h1>
+        <p>{{ getRoomTypeLabel(room.roomType) }}</p>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <!-- Image principale -->
+      <div class="room-image-section">
+        <mat-card>
+          <img 
+            [src]="room.imageUrl || 'assets/default-room.jpg'" 
+            [alt]="'Chambre ' + room.roomNumber"
+            class="main-image"
+            (error)="$any($event.target).src='assets/default-room.jpg'"
+          >
+          <div class="status-overlay" [ngClass]="getStatusColor(room.status)">
+            {{ getStatusLabel(room.status) }}
+          </div>
+        </mat-card>
+      </div>
+
+      <!-- Informations détaillées -->
+      <div class="room-info-section">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Informations</mat-card-title>
+          </mat-card-header>
+          
+          <mat-card-content>
+            <div class="info-grid">
+              <div class="info-item">
+                <mat-icon color="primary">people</mat-icon>
+                <div>
+                  <strong>Capacité</strong>
+                  <p>{{ room.capacity }} personne(s)</p>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <mat-icon color="primary">layers</mat-icon>
+                <div>
+                  <strong>Étage</strong>
+                  <p>{{ room.floor || 'N/A' }}</p>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <mat-icon color="primary">hotel</mat-icon>
+                <div>
+                  <strong>Type</strong>
+                  <p>{{ getRoomTypeLabel(room.roomType) }}</p>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <mat-icon color="primary">check_circle</mat-icon>
+                <div>
+                  <strong>Statut</strong>
+                  <p>{{ getStatusLabel(room.status) }}</p>
+                </div>
+              </div>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <div class="description-section">
+              <h3>Description</h3>
+              <p>{{ room.description || 'Aucune description disponible' }}</p>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Prix -->
+            <div class="price-section">
+              <div class="price-display">
+                <span class="price-amount">{{ room.pricePerNight | number:'1.2-2' }}</span>
+                <span class="price-currency">DT / nuit</span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="action-buttons">
+              <button 
+                mat-raised-button 
+                color="primary"
+                [disabled]="room.status !== 'AVAILABLE'"
+                [routerLink]="['/bookings/new']"
+                [queryParams]="{ roomId: room.id }"
+              >
+                <mat-icon>book_online</mat-icon>
+                Réserver maintenant
+              </button>
+              
+              <button 
+                mat-stroked-button 
+                routerLink="/rooms"
+              >
+                Retour à la liste
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="!loading && !room" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <h2>Chambre introuvable</h2>
+    <button mat-raised-button color="primary" routerLink="/rooms">
+      Retour à la liste
+    </button>
+  </div>
+</div>

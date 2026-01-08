@@ -1,11 +1,3 @@
-export enum BookingStatus {
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED',
-  NO_SHOW = 'NO_SHOW'
-}
-
 export interface Booking {
   id: number;
   customerId: number;
@@ -16,7 +8,7 @@ export interface Booking {
   checkOutDate: Date;
   numberOfGuests: number;
   totalPrice: number;
-  status: BookingStatus;
+  status: string;
   specialRequests?: string;
   createdAt: Date;
 }
@@ -24,8 +16,15 @@ export interface Booking {
 export interface BookingRequest {
   customerId: number;
   roomId: number;
-  checkInDate: string;
-  checkOutDate: string;
+  checkInDate: string; // Format: YYYY-MM-DD
+  checkOutDate: string; // Format: YYYY-MM-DD
   numberOfGuests: number;
   specialRequests?: string;
+}
+
+export enum BookingStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
 }

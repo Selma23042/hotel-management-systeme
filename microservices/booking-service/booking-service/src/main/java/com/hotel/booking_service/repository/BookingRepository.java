@@ -33,4 +33,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     
     @Query("SELECT b FROM Booking b WHERE b.checkOutDate = :date AND b.status = 'CONFIRMED'")
     List<Booking> findBookingsCheckingOutToday(@Param("date") LocalDate date);
+
+    long countByStatus(BookingStatus status);
 }

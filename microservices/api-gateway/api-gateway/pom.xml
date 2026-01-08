@@ -60,6 +60,33 @@
         <artifactId>spring-boot-starter-test</artifactId>
         <scope>test</scope>
     </dependency>
+    <!-- Actuator pour exposer les métriques -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+
+<!-- Micrometer pour Prometheus -->
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+<!-- Logback pour Logstash -->
+<dependency>
+    <groupId>net.logstash.logback</groupId>
+    <artifactId>logstash-logback-encoder</artifactId>
+    <version>7.4</version>
+</dependency>
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <optional>true</optional>
+</dependency>
+ <!-- Spring Cloud Gateway (OBLIGATOIRE) -->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-gateway</artifactId>
+    </dependency>
 </dependencies>
     <build>
         <plugins>

@@ -1,81 +1,100 @@
 <div class="dashboard-home">
-  <div class="welcome-section">
-    <ng-container *ngIf="currentUser$ | async as user; else notLoggedIn">
-      <h1>Bienvenue, {{ user.firstName }} !</h1>
-      <p>Voici un aperçu de votre compte</p>
-    </ng-container>
-    <ng-template #notLoggedIn>
-      <h1>Bienvenue sur le Dashboard !</h1>
-      <p>Connectez-vous pour voir vos informations</p>
-    </ng-template>
+  <!-- Header avec le nom de l'utilisateur -->
+  <div class="dashboard-header" *ngIf="currentUser$ | async as user">
+    <h1>Bienvenue, {{ user.firstName || user.email }} !</h1>
+    <p>Voici un aperçu de votre tableau de bord</p>
   </div>
 
+  <!-- Loading Spinner -->
   <div *ngIf="loading" class="loading-container">
-    <mat-spinner></mat-spinner>
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Chargement des statistiques...</p>
   </div>
 
-  <div *ngIf="!loading" class="stats-grid">
-    <mat-card class="stat-card">
+  <!-- Error Message -->
+  <div *ngIf="error && !loading" class="error-container">
+    <mat-card class="error-card">
       <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon color="primary">book_online</mat-icon>
-        </div>
-        <div class="stat-info">
-          <h3>{{ stats.totalBookings }}</h3>
-          <p>Réservations totales</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon color="warn">pending</mat-icon>
-        </div>
-        <div class="stat-info">
-          <h3>{{ stats.pendingBookings }}</h3>
-          <p>En attente</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon color="accent">receipt</mat-icon>
-        </div>
-        <div class="stat-info">
-          <h3>{{ stats.totalInvoices }}</h3>
-          <p>Factures</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon style="color: #4caf50;">meeting_room</mat-icon>
-        </div>
-        <div class="stat-info">
-          <h3>{{ stats.availableRooms }}</h3>
-          <p>Chambres disponibles</p>
-        </div>
+        <mat-icon color="warn">error_outline</mat-icon>
+        <p>{{ error }}</p>
+        <button mat-raised-button color="primary" (click)="refreshStats()">
+          <mat-icon>refresh</mat-icon>
+          Réessayer
+        </button>
       </mat-card-content>
     </mat-card>
   </div>
 
-  <div class="quick-actions">
+  <!-- Stats Cards -->
+  <div *ngIf="!loading && !error" class="stats-grid">
+    <!-- Total Réservations -->
+    <mat-card class="stat-card booking-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>event_note</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h2 class="stat-number">{{ stats.totalBookings }}</h2>
+          <p class="stat-label">Réservations totales</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- En Attente -->
+    <mat-card class="stat-card pending-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h2 class="stat-number">{{ stats.pendingBookings }}</h2>
+          <p class="stat-label">En attente</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Factures -->
+    <mat-card class="stat-card invoice-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>receipt_long</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h2 class="stat-number">{{ stats.totalInvoices }}</h2>
+          <p class="stat-label">Factures</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Chambres Disponibles -->
+    <mat-card class="stat-card room-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>hotel</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h2 class="stat-number">{{ stats.availableRooms }}</h2>
+          <p class="stat-label">Chambres disponibles</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Actions Rapides -->
+  <div *ngIf="!loading" class="actions-section">
     <h2>Actions rapides</h2>
     <div class="actions-grid">
-      <button mat-raised-button color="primary" routerLink="/rooms">
+      <button mat-raised-button color="primary" routerLink="/dashboard/rooms" class="action-btn">
         <mat-icon>search</mat-icon>
         Rechercher une chambre
       </button>
-      <button mat-raised-button color="accent" routerLink="/bookings">
-        <mat-icon>list</mat-icon>
+
+      <button mat-raised-button color="accent" routerLink="/dashboard/bookings" class="action-btn">
+        <mat-icon>event_note</mat-icon>
         Mes réservations
       </button>
-      <button mat-raised-button routerLink="/invoices">
+
+      <button mat-raised-button routerLink="/dashboard/billing" class="action-btn">
         <mat-icon>receipt_long</mat-icon>
         Mes factures
       </button>

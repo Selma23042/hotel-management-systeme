@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 // Services
 import { AuthService, User } from '../../../core/services/auth';
+import { DashboardService, DashboardStats } from '../../../core/services/dashboard';
 
 @Component({
   selector: 'app-dashboard-home',
@@ -28,15 +29,19 @@ import { AuthService, User } from '../../../core/services/auth';
 })
 export class DashboardHomeComponent implements OnInit {
   currentUser$!: Observable<User | null>;
-  stats: any = {
+  stats: DashboardStats = {
     totalBookings: 0,
     pendingBookings: 0,
-    totalInvoices: 0,  // Ajouté ici
+    totalInvoices: 0,
     availableRooms: 0
   };
   loading = true;
+  error: string | null = null;
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private dashboardService: DashboardService
+  ) {
     this.currentUser$ = this.authService.currentUser$;
   }
 
@@ -46,15 +51,31 @@ export class DashboardHomeComponent implements OnInit {
 
   loadDashboardData(): void {
     this.loading = true;
-    // Simuler le chargement des données
-    setTimeout(() => {
-      this.stats = {
-        totalBookings: 156,
-        pendingBookings: 12,
-        totalInvoices: 89,  // Ajouté ici aussi
-        availableRooms: 24
-      };
-      this.loading = false;
-    }, 1000);
+    this.error = null;
+
+    this.dashboardService.getDashboardStats().subscribe({
+      next: (data) => {
+        this.stats = data;
+        this.loading = false;
+        console.log('Dashboard stats loaded successfully:', data);
+      },
+      error: (err) => {
+        this.error = 'Erreur lors du chargement des statistiques. Veuillez réessayer.';
+        this.loading = false;
+        console.error('Error loading dashboard stats:', err);
+        
+        // Données par défaut en cas d'erreur (optionnel)
+        this.stats = {
+          totalBookings: 0,
+          pendingBookings: 0,
+          totalInvoices: 0,
+          availableRooms: 0
+        };
+      }
+    });
+  }
+
+  refreshStats(): void {
+    this.loadDashboardData();
   }
 }

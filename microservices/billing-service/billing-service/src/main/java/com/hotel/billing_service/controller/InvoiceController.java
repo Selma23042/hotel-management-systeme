@@ -1,6 +1,5 @@
 package com.hotel.billing_service.controller;
 
-
 import com.hotel.billing_service.dto.InvoiceRequestDTO;
 import com.hotel.billing_service.dto.InvoiceResponseDTO;
 import com.hotel.billing_service.dto.PaymentRequestDTO;
@@ -21,22 +20,17 @@ public class InvoiceController {
     
     private final InvoiceService invoiceService;
     
-    @PostMapping("/invoices")
-    public ResponseEntity<InvoiceResponseDTO> createInvoice(@Valid @RequestBody InvoiceRequestDTO request) {
-        InvoiceResponseDTO response = invoiceService.createInvoice(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    // ✅ 1. METTRE TOUS LES ENDPOINTS SPÉCIFIQUES EN PREMIER
+    
+    @GetMapping("/invoices/count")
+    public ResponseEntity<Long> countAllInvoices() {
+        return ResponseEntity.ok(invoiceService.countAll());
     }
     
-    @GetMapping("/invoices")
-    public ResponseEntity<List<InvoiceResponseDTO>> getAllInvoices() {
-        List<InvoiceResponseDTO> invoices = invoiceService.getAllInvoices();
-        return ResponseEntity.ok(invoices);
-    }
-    
-    @GetMapping("/invoices/{id}")
-    public ResponseEntity<InvoiceResponseDTO> getInvoiceById(@PathVariable Long id) {
-        InvoiceResponseDTO invoice = invoiceService.getInvoiceById(id);
-        return ResponseEntity.ok(invoice);
+    @GetMapping("/invoices/count/status/{status}")
+    public ResponseEntity<Long> countInvoicesByStatus(@PathVariable String status) {
+        Long count = invoiceService.countByStatus(status.toUpperCase());
+        return ResponseEntity.ok(count);
     }
     
     @GetMapping("/invoices/number/{invoiceNumber}")
@@ -62,6 +56,26 @@ public class InvoiceController {
         InvoiceStatus invoiceStatus = InvoiceStatus.valueOf(status.toUpperCase());
         List<InvoiceResponseDTO> invoices = invoiceService.getInvoicesByStatus(invoiceStatus);
         return ResponseEntity.ok(invoices);
+    }
+    
+    @GetMapping("/invoices")
+    public ResponseEntity<List<InvoiceResponseDTO>> getAllInvoices() {
+        List<InvoiceResponseDTO> invoices = invoiceService.getAllInvoices();
+        return ResponseEntity.ok(invoices);
+    }
+    
+    // ✅ 2. METTRE L'ENDPOINT GÉNÉRIQUE /{id} À LA FIN
+    @GetMapping("/invoices/{id}")
+    public ResponseEntity<InvoiceResponseDTO> getInvoiceById(@PathVariable Long id) {
+        InvoiceResponseDTO invoice = invoiceService.getInvoiceById(id);
+        return ResponseEntity.ok(invoice);
+    }
+    
+    // ✅ 3. LES AUTRES MÉTHODES (POST, PATCH, DELETE) APRÈS
+    @PostMapping("/invoices")
+    public ResponseEntity<InvoiceResponseDTO> createInvoice(@Valid @RequestBody InvoiceRequestDTO request) {
+        InvoiceResponseDTO response = invoiceService.createInvoice(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
     
     @PostMapping("/invoices/{id}/pay")

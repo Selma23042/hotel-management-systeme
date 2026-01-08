@@ -10,8 +10,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 
-// Services
-import { AuthService, User } from '../../../core/services/auth';
+// Services (ajustez le chemin selon votre structure)
+import { AuthService } from '../../../core/services/auth';
+
+// Interface User (créez-la ou ajustez selon votre modèle)
+export interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 
 @Component({
   selector: 'app-navbar',
@@ -30,7 +38,7 @@ import { AuthService, User } from '../../../core/services/auth';
 })
 export class NavbarComponent {
   @Output() toggleSidebar = new EventEmitter<void>();
-  currentUser$!: Observable<User | null>;
+  currentUser$: Observable<User | null>;
 
   constructor(
     private authService: AuthService,
@@ -45,6 +53,7 @@ export class NavbarComponent {
 
   onLogout(): void {
     this.authService.logout();
+    this.router.navigate(['/login']);
   }
 
   goToProfile(): void {

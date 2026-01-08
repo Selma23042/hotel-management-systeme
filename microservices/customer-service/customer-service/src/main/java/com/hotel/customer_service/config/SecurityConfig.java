@@ -23,7 +23,17 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                // Routes publiques pour authentification
                 .requestMatchers("/api/customers/register", "/api/customers/login").permitAll()
+                
+                // Routes pour les appels inter-services (IMPORTANT !)
+                // Permettre GET /api/customers/{id} pour que le Booking Service puisse récupérer les infos
+                .requestMatchers("GET", "/api/customers/**").permitAll()
+                
+                // Actuator endpoints
+                .requestMatchers("/actuator/**").permitAll()
+                
+                // Toutes les autres routes nécessitent une authentification
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

@@ -6,7 +6,8 @@ spring:
     name: billing-service
   
   datasource:
-    url: jdbc:postgresql://localhost:5435/billingdb
+    # ⚠️ UTILISER LE BON PORT DOCKER
+    url: jdbc:postgresql://localhost:5432/billingdb
     username: billinguser
     password: billingpass
     driver-class-name: org.postgresql.Driver
@@ -23,8 +24,19 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
+    # ⚠️ UTILISER LES CREDENTIALS DOCKER
     username: admin
     password: admin
+    connection-timeout: 30000
+    requested-heartbeat: 60
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3000
+          max-attempts: 3
+          multiplier: 2
+        default-requeue-rejected: false
 
 eureka:
   client:
@@ -54,7 +66,14 @@ management:
         enabled: true
     tags:
       application: ${spring.application.name}
-# Configuration RabbitMQ
+
+# ✅ CONFIGURATION RABBITMQ POUR LE LISTENER
 rabbitmq:
+  exchange:
+    booking: booking.exchange
   queue:
-    billing: billing.queue
+    booking-confirmed: booking.confirmed.queue
+    booking-completed: booking.completed.queue
+  routing-key:
+    booking-confirmed: booking.confirmed
+    booking-completed: booking.completed

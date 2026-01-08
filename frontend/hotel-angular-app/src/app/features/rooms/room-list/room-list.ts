@@ -47,13 +47,12 @@ export class RoomListComponent implements OnInit {
   minPrice: number = 0;
   maxPrice: number = 1000;
 
-  roomTypes = [
-    { value: 'ALL', label: 'Tous les types' },
-    { value: 'SINGLE', label: 'Simple' },
-    { value: 'DOUBLE', label: 'Double' },
-    { value: 'SUITE', label: 'Suite' },
-    { value: 'DELUXE', label: 'Deluxe' }
-  ];
+ roomTypes = [
+  { value: 'ALL', label: 'Tous les types' },
+  { value: 'STANDARD', label: 'Standard' },  
+  { value: 'DELUXE', label: 'Deluxe' },      
+  { value: 'SUITE', label: 'Suite' }         
+];
 
   constructor(
     private roomService: RoomService,

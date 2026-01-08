@@ -49,7 +49,7 @@ pipeline {
                 stage('Build Eureka') {
                     steps {
                         echo '🔧 Building Eureka Server...'
-                        dir('microservices/eureka-server') {
+                        dir('microservices/eureka-server/eureka-serve') {
                             bat 'mvn clean compile -DskipTests'
                         }
                     }
@@ -57,7 +57,7 @@ pipeline {
                 stage('Build Gateway') {
                     steps {
                         echo '🔧 Building API Gateway...'
-                        dir('microservices/api-gateway') {
+                        dir('microservices/api-gateway/api-gateway') {
                             bat 'mvn clean compile -DskipTests'
                         }
                     }
@@ -65,7 +65,7 @@ pipeline {
                 stage('Build Room Service') {
                     steps {
                         echo '🔧 Building Room Service...'
-                        dir('microservices/room-service') {
+                        dir('microservices/room-service/room-service') {
                             bat 'mvn clean compile -DskipTests'
                         }
                     }
@@ -73,7 +73,7 @@ pipeline {
                 stage('Build Customer Service') {
                     steps {
                         echo '🔧 Building Customer Service...'
-                        dir('microservices/customer-service') {
+                        dir('microservices/customer-service/customer-service') {
                             bat 'mvn clean compile -DskipTests'
                         }
                     }
@@ -81,7 +81,7 @@ pipeline {
                 stage('Build Booking Service') {
                     steps {
                         echo '🔧 Building Booking Service...'
-                        dir('microservices/booking-service') {
+                        dir('microservices/booking-service/booking-service') {
                             bat 'mvn clean compile -DskipTests'
                         }
                     }
@@ -89,7 +89,7 @@ pipeline {
                 stage('Build Billing Service') {
                     steps {
                         echo '🔧 Building Billing Service...'
-                        dir('microservices/billing-service') {
+                        dir('microservices/billing-service/billing-service') {
                             bat 'mvn clean compile -DskipTests'
                         }
                     }
@@ -112,7 +112,7 @@ pipeline {
                 stage('Test Room Service') {
                     steps {
                         echo '🧪 Testing Room Service...'
-                        dir('microservices/room-service') {
+                        dir('microservices/room-service/room-service') {
                             bat 'mvn test'
                         }
                     }
@@ -125,7 +125,7 @@ pipeline {
                 stage('Test Customer Service') {
                     steps {
                         echo '🧪 Testing Customer Service...'
-                        dir('microservices/customer-service') {
+                        dir('microservices/customer-service/customer-service') {
                             bat 'mvn test'
                         }
                     }
@@ -138,7 +138,7 @@ pipeline {
                 stage('Test Booking Service') {
                     steps {
                         echo '🧪 Testing Booking Service...'
-                        dir('microservices/booking-service') {
+                        dir('microservices/booking-service/booking-service') {
                             bat 'mvn test'
                         }
                     }
@@ -151,7 +151,7 @@ pipeline {
                 stage('Test Billing Service') {
                     steps {
                         echo '🧪 Testing Billing Service...'
-                        dir('microservices/billing-service') {
+                        dir('microservices/billing-service/billing-service') {
                             bat 'mvn test'
                         }
                     }
@@ -169,7 +169,7 @@ pipeline {
                 stage('Package Eureka') {
                     steps {
                         echo '📦 Packaging Eureka Server...'
-                        dir('microservices/eureka-server') {
+                        dir('microservices/eureka-server/eureka-serve') {
                             bat 'mvn package -DskipTests'
                         }
                     }
@@ -177,7 +177,7 @@ pipeline {
                 stage('Package Gateway') {
                     steps {
                         echo '📦 Packaging API Gateway...'
-                        dir('microservices/api-gateway') {
+                        dir('microservices/api-gateway/api-gateway') {
                             bat 'mvn package -DskipTests'
                         }
                     }
@@ -185,7 +185,7 @@ pipeline {
                 stage('Package Room Service') {
                     steps {
                         echo '📦 Packaging Room Service...'
-                        dir('microservices/room-service') {
+                        dir('microservices/room-service/room-service') {
                             bat 'mvn package -DskipTests'
                         }
                     }
@@ -193,7 +193,7 @@ pipeline {
                 stage('Package Customer Service') {
                     steps {
                         echo '📦 Packaging Customer Service...'
-                        dir('microservices/customer-service') {
+                        dir('microservices/customer-service/customer-service') {
                             bat 'mvn package -DskipTests'
                         }
                     }
@@ -201,7 +201,7 @@ pipeline {
                 stage('Package Booking Service') {
                     steps {
                         echo '📦 Packaging Booking Service...'
-                        dir('microservices/booking-service') {
+                        dir('microservices/booking-service/booking-service') {
                             bat 'mvn package -DskipTests'
                         }
                     }
@@ -209,7 +209,7 @@ pipeline {
                 stage('Package Billing Service') {
                     steps {
                         echo '📦 Packaging Billing Service...'
-                        dir('microservices/billing-service') {
+                        dir('microservices/billing-service/billing-service') {
                             bat 'mvn package -DskipTests'
                         }
                     }

@@ -11,6 +11,7 @@ pipeline {
         PROJECT_NAME = 'hotel-management'
         JAVA_HOME = 'C:\\Program Files\\java\\jdk-17'
         MAVEN_HOME = 'C:\\apache-maven-3.9.9'
+        MAVEN_LOCAL_REPO = "${env.WORKSPACE}\\.m2\\repository"
         PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
     }
     
@@ -33,6 +34,7 @@ pipeline {
                     echo.
                     echo JAVA_HOME: %JAVA_HOME%
                     echo MAVEN_HOME: %MAVEN_HOME%
+                    echo Maven Local Repository: %MAVEN_LOCAL_REPO%
                 '''
             }
         }
@@ -50,7 +52,7 @@ pipeline {
                     steps {
                         echo '🔧 Building Eureka Server...'
                         dir('microservices/eureka-server/eureka-serve') {
-                            bat 'mvn clean compile -DskipTests'
+                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -58,7 +60,7 @@ pipeline {
                     steps {
                         echo '🔧 Building API Gateway...'
                         dir('microservices/api-gateway/api-gateway') {
-                            bat 'mvn clean compile -DskipTests'
+                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -66,7 +68,7 @@ pipeline {
                     steps {
                         echo '🔧 Building Room Service...'
                         dir('microservices/room-service/room-service') {
-                            bat 'mvn clean compile -DskipTests'
+                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -74,7 +76,7 @@ pipeline {
                     steps {
                         echo '🔧 Building Customer Service...'
                         dir('microservices/customer-service/customer-service') {
-                            bat 'mvn clean compile -DskipTests'
+                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -82,7 +84,7 @@ pipeline {
                     steps {
                         echo '🔧 Building Booking Service...'
                         dir('microservices/booking-service/booking-service') {
-                            bat 'mvn clean compile -DskipTests'
+                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -90,7 +92,7 @@ pipeline {
                     steps {
                         echo '🔧 Building Billing Service...'
                         dir('microservices/billing-service/billing-service') {
-                            bat 'mvn clean compile -DskipTests'
+                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -113,7 +115,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Room Service...'
                         dir('microservices/room-service/room-service') {
-                            bat 'mvn test'
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                     post {
@@ -126,7 +128,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Customer Service...'
                         dir('microservices/customer-service/customer-service') {
-                            bat 'mvn test'
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                     post {
@@ -139,7 +141,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Booking Service...'
                         dir('microservices/booking-service/booking-service') {
-                            bat 'mvn test'
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                     post {
@@ -152,7 +154,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Billing Service...'
                         dir('microservices/billing-service/billing-service') {
-                            bat 'mvn test'
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                     post {
@@ -170,7 +172,7 @@ pipeline {
                     steps {
                         echo '📦 Packaging Eureka Server...'
                         dir('microservices/eureka-server/eureka-serve') {
-                            bat 'mvn package -DskipTests'
+                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -178,7 +180,7 @@ pipeline {
                     steps {
                         echo '📦 Packaging API Gateway...'
                         dir('microservices/api-gateway/api-gateway') {
-                            bat 'mvn package -DskipTests'
+                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -186,7 +188,7 @@ pipeline {
                     steps {
                         echo '📦 Packaging Room Service...'
                         dir('microservices/room-service/room-service') {
-                            bat 'mvn package -DskipTests'
+                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -194,7 +196,7 @@ pipeline {
                     steps {
                         echo '📦 Packaging Customer Service...'
                         dir('microservices/customer-service/customer-service') {
-                            bat 'mvn package -DskipTests'
+                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -202,7 +204,7 @@ pipeline {
                     steps {
                         echo '📦 Packaging Booking Service...'
                         dir('microservices/booking-service/booking-service') {
-                            bat 'mvn package -DskipTests'
+                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }
@@ -210,7 +212,7 @@ pipeline {
                     steps {
                         echo '📦 Packaging Billing Service...'
                         dir('microservices/billing-service/billing-service') {
-                            bat 'mvn package -DskipTests'
+                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
                         }
                     }
                 }

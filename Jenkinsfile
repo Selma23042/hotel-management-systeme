@@ -233,52 +233,106 @@ pipeline {
         }
         
         stage('Build Docker Images') {
-            steps {
-                script {
-                    echo '🐳 Building Docker images for Kubernetes...'
-                    
-                    // Build Eureka Server
-                    dir('microservices/eureka-server/eureka-serve') {
-                        bat 'docker build -t eureka-server:latest .'
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
+            parallel {
+                stage('Build Eureka') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
                     }
-                    
-                    // Build API Gateway
-                    dir('microservices/api-gateway/api-gateway') {
-                        bat 'docker build -t api-gateway:latest .'
+                    steps {
+                        echo '🐳 Building Eureka Server image...'
+                        dir('microservices/eureka-server/eureka-serve') {
+                            bat 'docker build -t eureka-server:latest . --progress=plain --no-cache'
+                        }
                     }
-                    
-                    // Build Billing Service
-                    dir('microservices/billing-service/billing-service') {
-                        bat 'docker build -t billing-service:latest .'
+                }
+                
+                stage('Build Gateway') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
                     }
-                    
-                    // Build Booking Service
-                    dir('microservices/booking-service/booking-service') {
-                        bat 'docker build -t booking-service:latest .'
+                    steps {
+                        echo '🐳 Building API Gateway image...'
+                        dir('microservices/api-gateway/api-gateway') {
+                            bat 'docker build -t api-gateway:latest . --progress=plain --no-cache'
+                        }
                     }
-                    
-                    // Build Customer Service
-                    dir('microservices/customer-service/customer-service') {
-                        bat 'docker build -t customer-service:latest .'
+                }
+                
+                stage('Build Billing Service') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
                     }
-                    
-                    // Build Room Service
-                    dir('microservices/room-service/room-service') {
-                        bat 'docker build -t room-service:latest .'
+                    steps {
+                        echo '🐳 Building Billing Service image...'
+                        dir('microservices/billing-service/billing-service') {
+                            bat 'docker build -t billing-service:latest . --progress=plain --no-cache'
+                        }
                     }
-                    
-                    // Build Frontend
-                    dir('frontend/hotel-angular-app') {
-                        bat 'docker build -t frontend:latest .'
+                }
+                
+                stage('Build Booking Service') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
                     }
-                    
-                    echo '✅ Docker images built successfully!'
+                    steps {
+                        echo '🐳 Building Booking Service image...'
+                        dir('microservices/booking-service/booking-service') {
+                            bat 'docker build -t booking-service:latest . --progress=plain --no-cache'
+                        }
+                    }
+                }
+                
+                stage('Build Customer Service') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
+                    }
+                    steps {
+                        echo '🐳 Building Customer Service image...'
+                        dir('microservices/customer-service/customer-service') {
+                            bat 'docker build -t customer-service:latest . --progress=plain --no-cache'
+                        }
+                    }
+                }
+                
+                stage('Build Room Service') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
+                    }
+                    steps {
+                        echo '🐳 Building Room Service image...'
+                        dir('microservices/room-service/room-service') {
+                            bat 'docker build -t room-service:latest . --progress=plain --no-cache'
+                        }
+                    }
+                }
+                
+                stage('Build Frontend') {
+                    options {
+                        timeout(time: 10, unit: 'MINUTES')
+                    }
+                    steps {
+                        echo '🐳 Building Frontend image...'
+                        dir('frontend/hotel-angular-app') {
+                            bat 'docker build -t frontend:latest . --progress=plain --no-cache'
+                        }
+                    }
+                }
+            }
+            post {
+                success {
+                    echo '✅ All Docker images built successfully!'
                     bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
                 }
             }
         }
         
         stage('Deploy to Kubernetes') {
+            options {
+                timeout(time: 20, unit: 'MINUTES')
+            }
             steps {
                 script {
                     echo '🚀 Deploying to Kubernetes...'
@@ -402,6 +456,9 @@ pipeline {
         }
         
         stage('Kubernetes Health Check') {
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
             steps {
                 script {
                     echo '🏥 Checking Kubernetes services health...'

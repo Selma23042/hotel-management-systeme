@@ -237,7 +237,6 @@ pipeline {
                 script {
                     echo '🐳 Preparing Docker environment...'
                     
-                    // Vérifier si Docker est fonctionnel
                     def dockerRunning = powershell(
                         returnStatus: true,
                         script: '''
@@ -295,7 +294,7 @@ pipeline {
                                             break
                                         }
                                     } catch {
-                                        # Continuer à attendre
+                                        # Continue waiting
                                     }
                                     
                                     Write-Host "⏳ Still waiting for Docker... (attempt $attempt/$maxAttempts)"
@@ -319,7 +318,6 @@ pipeline {
                         echo '✅ Docker daemon is already running'
                     }
                     
-                    // Afficher l'état de Docker
                     bat '''
                         echo.
                         echo ========== Docker Information ==========
@@ -344,45 +342,48 @@ pipeline {
             }
             steps {
                 script {
-                    echo '🐳 Building Docker images sequentially...'
+                    echo '🐳 Building Docker images from workspace root...'
                     
                     def services = [
-                        [name: 'eureka-server', path: 'microservices/eureka-server/eureka-serve'],
-                        [name: 'api-gateway', path: 'microservices/api-gateway/api-gateway'],
-                        [name: 'billing-service', path: 'microservices/billing-service/billing-service'],
-                        [name: 'booking-service', path: 'microservices/booking-service/booking-service'],
-                        [name: 'customer-service', path: 'microservices/customer-service/customer-service'],
-                        [name: 'room-service', path: 'microservices/room-service/room-service'],
-                        [name: 'frontend', path: 'frontend/hotel-angular-app']
+                        [name: 'eureka-server', path: 'microservices\\eureka-server\\eureka-serve'],
+                        [name: 'api-gateway', path: 'microservices\\api-gateway\\api-gateway'],
+                        [name: 'billing-service', path: 'microservices\\billing-service\\billing-service'],
+                        [name: 'booking-service', path: 'microservices\\booking-service\\booking-service'],
+                        [name: 'customer-service', path: 'microservices\\customer-service\\customer-service'],
+                        [name: 'room-service', path: 'microservices\\room-service\\room-service'],
+                        [name: 'frontend', path: 'frontend\\hotel-angular-app']
                     ]
                     
                     def buildErrors = []
                     
-                    services.each { service ->
-                        try {
-                            echo "🐳 Building ${service.name} image..."
-                            retry(2) {
-                                try {
-                                    // Build from PROJECT ROOT with context pointing to root (.)
-                                    // and dockerfile in the service subdirectory
-                                    bat """
-                                        cd ${env.WORKSPACE}
-                                        docker build -f ${service.path}/Dockerfile -t ${service.name}:latest . --progress=plain
-                                    """
-                                    echo "✅ ${service.name} image built successfully"
-                                } catch (Exception e) {
-                                    echo "⚠️ Build failed for ${service.name}, retrying..."
-                                    sleep time: 10, unit: 'SECONDS'
-                                    throw e
+                    // Revenir à la racine du workspace
+                    dir(env.WORKSPACE) {
+                        services.each { service ->
+                            try {
+                                echo "🐳 Building ${service.name} image..."
+                                echo "   Dockerfile: ${service.path}\\Dockerfile"
+                                echo "   Context: ${env.WORKSPACE}"
+                                
+                                retry(2) {
+                                    try {
+                                        bat """
+                                            docker build -f ${service.path}\\Dockerfile -t ${service.name}:latest . --progress=plain
+                                        """
+                                        echo "✅ ${service.name} image built successfully"
+                                    } catch (Exception e) {
+                                        echo "⚠️ Build failed for ${service.name}, retrying..."
+                                        sleep time: 10, unit: 'SECONDS'
+                                        throw e
+                                    }
                                 }
+                                
+                                // Délai entre les builds
+                                sleep time: 5, unit: 'SECONDS'
+                                
+                            } catch (Exception e) {
+                                buildErrors.add("${service.name}: ${e.message}")
+                                echo "❌ Failed to build ${service.name} after retries: ${e.message}"
                             }
-                            
-                            // Délai entre les builds
-                            sleep time: 5, unit: 'SECONDS'
-                            
-                        } catch (Exception e) {
-                            buildErrors.add("${service.name}: ${e.message}")
-                            echo "❌ Failed to build ${service.name} after retries: ${e.message}"
                         }
                     }
                     
@@ -410,13 +411,11 @@ pipeline {
                     echo '🚀 Deploying to Kubernetes...'
                     
                     try {
-                        // Phase 1: Créer le namespace, secrets et configmaps
                         echo '📦 Phase 1: Creating namespace, secrets and configmaps...'
                         bat 'kubectl apply -f kubernetes/namespaces/hotel-namespace.yaml'
                         bat 'kubectl apply -f kubernetes/secrets/database-secrets.yaml'
                         bat 'kubectl apply -f kubernetes/configmaps/application-config.yaml'
                         
-                        // Phase 2: Déployer les StatefulSets (Bases de données + RabbitMQ)
                         echo '🗄️ Phase 2: Deploying databases and RabbitMQ...'
                         bat 'kubectl apply -f kubernetes/statefulsets/postgresql-statefulset.yaml'
                         bat 'kubectl apply -f kubernetes/statefulsets/rabbitmq-statefulset.yaml'
@@ -424,16 +423,13 @@ pipeline {
                         echo '⏳ Waiting 60s for databases to initialize...'
                         sleep time: 60, unit: 'SECONDS'
                         
-                        // Vérifier les StatefulSets
                         bat "kubectl get statefulsets -n %KUBE_NAMESPACE%"
                         bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=billing-db"
                         
-                        // Phase 3: Créer les Services des bases de données
                         echo '🔗 Phase 3: Creating database and messaging services...'
                         bat 'kubectl apply -f kubernetes/services/databases-services.yaml'
                         bat 'kubectl apply -f kubernetes/services/rabbitmq-service.yaml'
                         
-                        // Phase 4: Déployer Eureka Server
                         echo '🔍 Phase 4: Deploying Eureka Server...'
                         bat 'kubectl apply -f kubernetes/deployments/eureka-deployment.yaml'
                         bat 'kubectl apply -f kubernetes/services/eureka-service.yaml'
@@ -441,11 +437,9 @@ pipeline {
                         echo '⏳ Waiting 60s for Eureka to start...'
                         sleep time: 60, unit: 'SECONDS'
                         
-                        // Vérifier Eureka
                         bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=eureka-server"
                         bat "kubectl logs -n %KUBE_NAMESPACE% -l app=eureka-server --tail=30 || echo Cannot get logs"
                         
-                        // Phase 5: Déployer API Gateway
                         echo '🚪 Phase 5: Deploying API Gateway...'
                         bat 'kubectl apply -f kubernetes/deployments/gateway-deployment.yaml'
                         bat 'kubectl apply -f kubernetes/services/gateway-service.yaml'
@@ -455,7 +449,6 @@ pipeline {
                         
                         bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=api-gateway"
                         
-                        // Phase 6: Déployer les Microservices
                         echo '🔧 Phase 6: Deploying microservices...'
                         bat 'kubectl apply -f kubernetes/deployments/billing-service-deployment.yaml'
                         bat 'kubectl apply -f kubernetes/deployments/booking-service-deployment.yaml'
@@ -470,10 +463,8 @@ pipeline {
                         echo '⏳ Waiting 60s for microservices to start...'
                         sleep time: 60, unit: 'SECONDS'
                         
-                        // Vérifier les microservices
                         bat "kubectl get pods -n %KUBE_NAMESPACE% | findstr service"
                         
-                        // Phase 7: Déployer Frontend
                         echo '🎨 Phase 7: Deploying frontend...'
                         bat 'kubectl apply -f kubernetes/deployments/frontend-deployment.yaml'
                         bat 'kubectl apply -f kubernetes/services/frontend-service.yaml'
@@ -481,7 +472,6 @@ pipeline {
                         echo '⏳ Waiting 30s for frontend to start...'
                         sleep time: 30, unit: 'SECONDS'
                         
-                        // Phase 8: Vérification finale
                         echo '✅ Deployment completed! Checking status...'
                         bat "kubectl get all -n %KUBE_NAMESPACE%"
                         
@@ -498,7 +488,6 @@ pipeline {
                     } catch (Exception e) {
                         echo "❌ Kubernetes deployment failed: ${e.message}"
                         
-                        // Diagnostics détaillés
                         bat """
                             echo.
                             echo ========== POD STATUS ==========
@@ -536,10 +525,9 @@ pipeline {
                     echo '🏥 Checking Kubernetes services health...'
                     
                     try {
-                        // Attendre que tous les pods soient prêts
                         echo 'Waiting for all pods to be ready...'
                         
-                        def maxWaitTime = 300 // 5 minutes
+                        def maxWaitTime = 300
                         def waitInterval = 15
                         def timeWaited = 0
                         def allPodsReady = false
@@ -553,7 +541,6 @@ pipeline {
                             echo "Current pod status:"
                             echo podStatus
                             
-                            // Vérifier si tous les pods sont Running et Ready
                             def notReadyCount = bat(
                                 script: """kubectl get pods -n %KUBE_NAMESPACE% --field-selector=status.phase!=Running --no-headers 2>nul | find /c /v "" """,
                                 returnStdout: true
@@ -575,7 +562,6 @@ pipeline {
                             bat "kubectl get pods -n %KUBE_NAMESPACE%"
                         }
                         
-                        // Vérifier les services individuellement
                         echo '''
                         
                         ========================================
@@ -607,10 +593,6 @@ pipeline {
                         ========================================
                         ✅ HEALTH CHECK COMPLETED
                         ========================================
-                        '''
-                        
-                        // Afficher les instructions d'accès
-                        echo '''
                         
                         📋 To access services, run these commands:
                         
@@ -638,7 +620,6 @@ pipeline {
                             kubectl get services -n %KUBE_NAMESPACE%
                         """
                         
-                        // Ne pas échouer le pipeline si c'est juste un avertissement
                         currentBuild.result = 'UNSTABLE'
                     }
                 }

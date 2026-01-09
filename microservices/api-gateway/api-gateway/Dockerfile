@@ -2,8 +2,8 @@
 FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
-# Copier le pom parent et l'installer dans le repository Maven local
-COPY hotel-parent/pom.xml ./parent-pom.xml
+# Remonter 3 niveaux pour accéder à hotel-parent
+COPY ../../../hotel-parent/pom.xml ./parent-pom.xml
 RUN mvn install:install-file \
     -Dfile=./parent-pom.xml \
     -DgroupId=com.hotel \
@@ -11,9 +11,9 @@ RUN mvn install:install-file \
     -Dversion=0.0.1-SNAPSHOT \
     -Dpackaging=pom
 
-# Copier le pom du service API Gateway
-COPY microservices/api-gateway/pom.xml ./api-gateway/pom.xml
-COPY microservices/api-gateway/src ./api-gateway/src
+# Copier depuis le dossier courant
+COPY pom.xml ./api-gateway/pom.xml
+COPY src ./api-gateway/src
 
 WORKDIR /app/api-gateway
 RUN mvn clean package -DskipTests
@@ -21,7 +21,6 @@ RUN mvn clean package -DskipTests
 # Stage 2: Run
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-
 COPY --from=build /app/api-gateway/target/*.jar app.jar
 
 EXPOSE 8080

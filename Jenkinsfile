@@ -274,65 +274,65 @@ pipeline {
 
         
         stage('Build Docker Images') {
-            options {
-                timeout(time: 60, unit: 'MINUTES')
-            }
-            steps {
-                script {
-                    echo '🐳 Building Docker images sequentially...'
-                    
-                    def services = [
-                        [name: 'eureka-server', path: 'microservices/eureka-server/eureka-serve'],
-                        [name: 'api-gateway', path: 'microservices/api-gateway/api-gateway'],
-                        [name: 'billing-service', path: 'microservices/billing-service/billing-service'],
-                        [name: 'booking-service', path: 'microservices/booking-service/booking-service'],
-                        [name: 'customer-service', path: 'microservices/customer-service/customer-service'],
-                        [name: 'room-service', path: 'microservices/room-service/room-service'],
-                        [name: 'frontend', path: 'frontend/hotel-angular-app']
-                    ]
-                    
-                    def buildErrors = []
-                    
-                    services.each { service ->
-                        try {
-                            echo "🐳 Building ${service.name} image..."
-                            dir(service.path) {
-                                retry(2) {
-                                    try {
-                                        bat "docker build -t ${service.name}:latest . --progress=plain"
-                                        echo "✅ ${service.name} image built successfully"
-                                    } catch (Exception e) {
-                                        echo "⚠️ Build failed for ${service.name}, retrying..."
-                                        sleep time: 10, unit: 'SECONDS'
-                                        throw e
-                                    }
-                                }
-                            }
-                            
-                            // Délai entre les builds
-                            sleep time: 5, unit: 'SECONDS'
-                            
-                        } catch (Exception e) {
-                            buildErrors.add("${service.name}: ${e.message}")
-                            echo "❌ Failed to build ${service.name} after retries: ${e.message}"
+    steps {
+        script {
+            echo '🐳 Building Docker images sequentially from project root...'
+            
+            def services = [
+                [name: 'eureka-server', path: 'microservices/eureka-server/eureka-serve/Dockerfile'],
+                [name: 'api-gateway', path: 'microservices/api-gateway/api-gateway/Dockerfile'],
+                [name: 'customer-service', path: 'microservices/customer-service/customer-service/Dockerfile'],
+                [name: 'room-service', path: 'microservices/room-service/room-service/Dockerfile'],
+                [name: 'booking-service', path: 'microservices/booking-service/booking-service/Dockerfile'],
+                [name: 'billing-service', path: 'microservices/billing-service/billing-service/Dockerfile'],
+                [name: 'frontend', path: 'frontend/hotel-angular-app/Dockerfile']
+            ]
+            
+            def buildErrors = [:]
+            
+            services.each { service ->
+                echo "🐳 Building ${service.name} image..."
+                def maxRetries = 2
+                def success = false
+                
+                for (int attempt = 1; attempt <= maxRetries && !success; attempt++) {
+                    try {
+                        bat "docker build -t ${service.name}:latest -f ${service.path} . --progress=plain"
+                        echo "✅ Successfully built ${service.name}"
+                        success = true
+                    } catch (Exception e) {
+                        if (attempt < maxRetries) {
+                            echo "⚠️ Build failed for ${service.name}, retrying... (attempt ${attempt}/${maxRetries})"
+                            sleep(10)
+                        } else {
+                            echo "❌ Failed to build ${service.name} after ${maxRetries} retries: ${e.message}"
+                            buildErrors[service.name] = e.message
                         }
                     }
-                    
-                    // Vérifier les erreurs
-                    if (buildErrors.size() > 0) {
-                        echo "❌ Build errors occurred for the following services:"
-                        buildErrors.each { error ->
-                            echo "  - ${error}"
-                        }
-                        error("Docker image build failed for ${buildErrors.size()} service(s)")
-                    }
-                    
-                    echo '✅ All Docker images built successfully!'
-                    bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
                 }
             }
+            
+            // Afficher le résumé
+            if (!buildErrors.isEmpty()) {
+                echo '❌ Build errors occurred for the following services:'
+                buildErrors.each { name, error ->
+                    echo "- ${name}: ${error}"
+                }
+                error("Docker image build failed for ${buildErrors.size()} service(s)")
+            } else {
+                echo '✅ All Docker images built successfully!'
+            }
         }
-        
+    }
+    post {
+        always {
+            script {
+                echo '🧹 Cleaning up Docker resources...'
+                bat 'docker system prune -f --volumes=false || echo "Cleanup skipped"'
+            }
+        }
+    }
+}
         stage('Deploy to Kubernetes') {
             options {
                 timeout(time: 20, unit: 'MINUTES')

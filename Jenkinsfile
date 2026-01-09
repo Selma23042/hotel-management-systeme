@@ -228,72 +228,151 @@ pipeline {
             }
         }
         
-        stage('Stop Running Containers') {
-            steps {
-                script {
-                    echo '🛑 Stopping existing containers and freeing ports...'
+     stage('Stop Running Containers') {
+    steps {
+        script {
+            echo '🛑 Stopping existing containers thoroughly...'
+            
+            dir('docker') {
+                bat '''
+                    echo Stopping all services...
+                    docker-compose down -v --remove-orphans 2>nul || echo No containers to stop
                     
-                    // Arrêter docker-compose
-                    dir('docker') {
-                        bat '''
-                            echo Stopping Docker Compose services...
-                            docker-compose down -v --remove-orphans 2>nul || echo No containers to stop
-                        '''
+                    echo Waiting for cleanup...
+                    timeout /t 5 /nobreak >nul 2>&1
+                    
+                    echo Pruning networks...
+                    docker network prune -f
+                '''
+            }
+            
+            // Libérer les ports critiques
+            bat '''
+                @echo off
+                echo.
+                echo Killing processes on critical ports...
+                
+                for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8761" ^| findstr "LISTENING"') do (
+                    echo Killing process %%a on port 8761
+                    taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                )
+                
+                for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8080" ^| findstr "LISTENING"') do (
+                    echo Killing process %%a on port 8080
+                    taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                )
+                
+                echo.
+                echo Port cleanup completed!
+                timeout /t 5 /nobreak >nul 2>&1
+            '''
+        }
+    }
+}
+
+stage('Deploy Application') {
+    steps {
+        script {
+            echo '🚀 Deploying application with improved error handling...'
+            dir('docker') {
+                try {
+                    // Arrêter et nettoyer complètement
+                    echo '🧹 Complete cleanup...'
+                    bat '''
+                        docker-compose down -v --remove-orphans 2>nul || echo "Nothing to stop"
+                        docker network prune -f
+                    '''
+                    
+                    sleep time: 5, unit: 'SECONDS'
+                    
+                    // Phase 1: Infrastructure
+                    echo '📊 Phase 1: Starting databases...'
+                    bat 'docker-compose up -d billing-db customer-db booking-db room-db'
+                    sleep time: 15, unit: 'SECONDS'
+                    
+                    // Phase 2: Message broker
+                    echo '🐰 Phase 2: Starting RabbitMQ...'
+                    bat 'docker-compose up -d rabbitmq'
+                    sleep time: 10, unit: 'SECONDS'
+                    
+                    // Phase 3: Eureka avec retry
+                    echo '🔍 Phase 3: Starting Eureka Server (with retries)...'
+                    def eurekaStarted = false
+                    def maxRetries = 3
+                    
+                    for (int i = 1; i <= maxRetries; i++) {
+                        echo "Eureka start attempt ${i}/${maxRetries}..."
+                        
+                        bat 'docker-compose up -d eureka-server'
+                        sleep time: 30, unit: 'SECONDS'
+                        
+                        // Vérifier les logs
+                        bat 'docker logs eureka-server --tail 100'
+                        
+                        // Tester la santé
+                        def exitCode = bat(script: 'curl -f http://localhost:8761/actuator/health', returnStatus: true)
+                        
+                        if (exitCode == 0) {
+                            echo '✅ Eureka is healthy!'
+                            eurekaStarted = true
+                            break
+                        } else {
+                            echo "⚠️ Eureka not ready yet. Attempt ${i}/${maxRetries} failed"
+                            if (i < maxRetries) {
+                                echo '🔄 Restarting Eureka...'
+                                bat 'docker-compose restart eureka-server'
+                                sleep time: 20, unit: 'SECONDS'
+                            }
+                        }
                     }
                     
-                    // Libérer les ports - VERSION CORRIGÉE
+                    if (!eurekaStarted) {
+                        error('❌ Eureka Server failed to start after multiple attempts')
+                    }
+                    
+                    // Phase 4: API Gateway
+                    echo '🚪 Phase 4: Starting API Gateway...'
+                    bat 'docker-compose up -d api-gateway'
+                    sleep time: 20, unit: 'SECONDS'
+                    
+                    // Phase 5: Microservices
+                    echo '🔧 Phase 5: Starting microservices...'
+                    bat 'docker-compose up -d room-service customer-service booking-service billing-service'
+                    sleep time: 25, unit: 'SECONDS'
+                    
+                    // Phase 6: Frontend
+                    echo '🎨 Phase 6: Starting frontend...'
+                    bat 'docker-compose up -d frontend'
+                    sleep time: 10, unit: 'SECONDS'
+                    
+                    // Phase 7: Monitoring (optional)
+                    echo '📊 Phase 7: Starting monitoring stack...'
+                    bat 'docker-compose up -d elasticsearch kibana logstash prometheus grafana alertmanager'
+                    
+                    echo '✅ All services deployed successfully!'
+                    
+                } catch (Exception e) {
+                    echo "❌ Deployment failed: ${e.message}"
+                    echo '📋 Getting container logs for debugging...'
+                    
                     bat '''
-                        @echo off
                         echo.
-                        echo Killing processes on critical ports...
-                        
-                        REM Function to kill process on port
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8761" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8761
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8080" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8080
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8081" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8081
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8082" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8082
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8083" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8083
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8084" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8084
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":4200" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 4200
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
+                        echo ========== EUREKA LOGS ==========
+                        docker logs eureka-server --tail 100 2>nul || echo "Eureka container not found"
                         echo.
-                        echo Waiting 5 seconds for ports to be released...
-                        timeout /t 5 /nobreak >nul 2>&1
-                        
+                        echo ========== DOCKER PS ==========
+                        docker ps -a
                         echo.
-                        echo Port cleanup completed!
-                        exit 0
+                        echo ========== DOCKER COMPOSE PS ==========
+                        docker-compose ps
                     '''
+                    
+                    throw e
                 }
             }
         }
+    }
+}
         
         stage('Build Docker Images') {
             steps {
@@ -309,16 +388,103 @@ pipeline {
         stage('Deploy Application') {
     steps {
         script {
-            echo '🚀 Deploying application...'
+            echo '🚀 Deploying application with improved error handling...'
             dir('docker') {
-                // Use docker compose (v2) or docker-compose (v1) with compatibility flag
-                bat '''
-                    docker compose up -d 2>nul || docker-compose --compatibility up -d
-                '''
+                try {
+                    // Arrêter et nettoyer complètement
+                    echo '🧹 Complete cleanup...'
+                    bat '''
+                        docker-compose down -v --remove-orphans 2>nul || echo "Nothing to stop"
+                        docker network prune -f
+                    '''
+                    
+                    sleep time: 5, unit: 'SECONDS'
+                    
+                    // Phase 1: Infrastructure
+                    echo '📊 Phase 1: Starting databases...'
+                    bat 'docker-compose up -d billing-db customer-db booking-db room-db'
+                    sleep time: 15, unit: 'SECONDS'
+                    
+                    // Phase 2: Message broker
+                    echo '🐰 Phase 2: Starting RabbitMQ...'
+                    bat 'docker-compose up -d rabbitmq'
+                    sleep time: 10, unit: 'SECONDS'
+                    
+                    // Phase 3: Eureka avec retry
+                    echo '🔍 Phase 3: Starting Eureka Server (with retries)...'
+                    def eurekaStarted = false
+                    def maxRetries = 3
+                    
+                    for (int i = 1; i <= maxRetries; i++) {
+                        echo "Eureka start attempt ${i}/${maxRetries}..."
+                        
+                        bat 'docker-compose up -d eureka-server'
+                        sleep time: 30, unit: 'SECONDS'
+                        
+                        // Vérifier les logs
+                        bat 'docker logs eureka-server --tail 100'
+                        
+                        // Tester la santé
+                        def exitCode = bat(script: 'curl -f http://localhost:8761/actuator/health', returnStatus: true)
+                        
+                        if (exitCode == 0) {
+                            echo '✅ Eureka is healthy!'
+                            eurekaStarted = true
+                            break
+                        } else {
+                            echo "⚠️ Eureka not ready yet. Attempt ${i}/${maxRetries} failed"
+                            if (i < maxRetries) {
+                                echo '🔄 Restarting Eureka...'
+                                bat 'docker-compose restart eureka-server'
+                                sleep time: 20, unit: 'SECONDS'
+                            }
+                        }
+                    }
+                    
+                    if (!eurekaStarted) {
+                        error('❌ Eureka Server failed to start after multiple attempts')
+                    }
+                    
+                    // Phase 4: API Gateway
+                    echo '🚪 Phase 4: Starting API Gateway...'
+                    bat 'docker-compose up -d api-gateway'
+                    sleep time: 20, unit: 'SECONDS'
+                    
+                    // Phase 5: Microservices
+                    echo '🔧 Phase 5: Starting microservices...'
+                    bat 'docker-compose up -d room-service customer-service booking-service billing-service'
+                    sleep time: 25, unit: 'SECONDS'
+                    
+                    // Phase 6: Frontend
+                    echo '🎨 Phase 6: Starting frontend...'
+                    bat 'docker-compose up -d frontend'
+                    sleep time: 10, unit: 'SECONDS'
+                    
+                    // Phase 7: Monitoring (optional)
+                    echo '📊 Phase 7: Starting monitoring stack...'
+                    bat 'docker-compose up -d elasticsearch kibana logstash prometheus grafana alertmanager'
+                    
+                    echo '✅ All services deployed successfully!'
+                    
+                } catch (Exception e) {
+                    echo "❌ Deployment failed: ${e.message}"
+                    echo '📋 Getting container logs for debugging...'
+                    
+                    bat '''
+                        echo.
+                        echo ========== EUREKA LOGS ==========
+                        docker logs eureka-server --tail 100 2>nul || echo "Eureka container not found"
+                        echo.
+                        echo ========== DOCKER PS ==========
+                        docker ps -a
+                        echo.
+                        echo ========== DOCKER COMPOSE PS ==========
+                        docker-compose ps
+                    '''
+                    
+                    throw e
+                }
             }
-            
-            echo '⏳ Waiting for services to be healthy...'
-            sleep time: 30, unit: 'SECONDS'
         }
     }
 }

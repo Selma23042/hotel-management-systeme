@@ -227,43 +227,7 @@ pipeline {
                 }
             }
         }
-        
-        stage('Stop Running Containers') {
-    steps {
-        script {
-            echo '🛑 Stopping existing containers and freeing ports...'
-            dir('docker') {
-                powershell '''
-                    Write-Host "Stopping Docker Compose services..."
-                    docker-compose down -v --remove-orphans
-                    
-                    Write-Host "`nKilling processes on critical ports..."
-                    
-                    # Fonction pour tuer un processus sur un port
-                    function Kill-PortProcess($port) {
-                        $process = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | 
-                                  Where-Object {$_.State -eq "Listen"}
-                        if ($process) {
-                            $pid = $process.OwningProcess
-                            Write-Host "Killing process $pid on port $port"
-                            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-                        }
-                    }
-                    
-                    # Ports à nettoyer
-                    $ports = @(8761, 8080, 8081, 8082, 8083, 8084, 4200)
-                    foreach ($port in $ports) {
-                        Kill-PortProcess $port
-                    }
-                    
-                    Write-Host "`nWaiting for ports to be released..."
-                    Start-Sleep -Seconds 5
-                    
-                    Write-Host "`nCleanup completed!"
-                '''
-            }
-        }
-    }
+   
 }
         
         stage('Build Docker Images') {

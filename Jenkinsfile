@@ -232,42 +232,20 @@ pipeline {
             }
         }
         
-    stage('Prepare Docker Environment') {
+   stage('Prepare Docker Environment') {
     steps {
         script {
-            echo '🐳 Vérification si Docker fonctionne...'
+            echo '🔧 Vérification si Docker fonctionne...'
+            bat 'docker --version'
             
-            def dockerPath = 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'
-
-            // Vérifier si Docker est déjà en cours d'exécution
-            def dockerRunning = bat(
-                script: "tasklist /FI \"IMAGENAME eq Docker Desktop.exe\" 2>NUL | find /I \"Docker Desktop.exe\" > NUL && echo true || echo false",
-                returnStdout: true
-            ).trim()
-
-            if (dockerRunning == "false") {
-                echo '⚠️ Docker n\'est pas en cours d\'exécution, démarrage de Docker Desktop...'
-                bat "\"$dockerPath\""
-                echo '🚀 Docker Desktop démarré !'
-            } else {
-                echo '✅ Docker est déjà en cours d\'exécution.'
-            }
+            echo '📊 Utilisation du disque avant nettoyage =========='
+            bat 'docker system df'
             
-            // Afficher l'état de Docker
-            bat '''
-                echo.
-                echo ========== Informations Docker ==========
-                docker info
-                echo.
-                echo ========== Utilisation du disque avant nettoyage ==========
-                docker system df
-                echo.
-                echo ========== Nettoyage des anciennes ressources Docker ==========
-                docker system prune -f --volumes=false || echo "Nettoyage ignoré"
-                echo.
-                echo ========== Utilisation du disque après nettoyage ==========
-                docker system df
-            '''
+            echo '🧹 Nettoyage des anciennes ressources Docker...'
+            // Nettoyer seulement les images dangereuses (plus rapide)
+            bat 'docker image prune -f || echo "Cleanup skipped"'
+            
+            echo '✅ Docker est prêt en cours d\'exécution'
         }
     }
 }

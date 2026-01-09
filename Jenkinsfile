@@ -46,6 +46,13 @@ pipeline {
             }
         }
         
+        stage('Install Parent POM') {
+            steps {
+                echo '📦 Installing parent POM...'
+                bat "mvn clean install -N -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+            }
+        }
+        
         stage('Build Backend Services') {
             parallel {
                 stage('Build Eureka') {

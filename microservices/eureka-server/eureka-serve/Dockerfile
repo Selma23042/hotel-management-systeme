@@ -20,18 +20,17 @@ COPY microservices/eureka-server/eureka-serve/src ./eureka-server/src
 # Build
 WORKDIR /app/eureka-server
 RUN mvn clean package -DskipTests
-
 # Stage 2: Run
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+
+# Installer curl pour le healthcheck
+RUN apk add --no-cache curl
 
 COPY --from=build /app/eureka-server/target/*.jar app.jar
 
 EXPOSE 8761
 
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8761/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

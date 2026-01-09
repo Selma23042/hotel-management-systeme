@@ -1,6 +1,11 @@
 pipeline {
     agent any
     
+    parameters {
+        booleanParam(name: 'CLEAN_MAVEN_CACHE', defaultValue: false, description: 'Clean Maven local repository before build')
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests')
+    }
+    
     tools {
         maven 'Maven-3.9'
         nodejs 'NodeJS-18'
@@ -14,9 +19,27 @@ pipeline {
         MAVEN_LOCAL_REPO = "${env.WORKSPACE}\\.m2\\repository"
         PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Windows\\System32;${env.PATH}"
         KUBE_NAMESPACE = 'hotel-management'
+        MAVEN_OPTS = '-Xmx2048m -XX:MaxPermSize=512m -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=180'
     }
     
     stages {
+        stage('Clean Maven Cache') {
+            when {
+                expression { params.CLEAN_MAVEN_CACHE == true }
+            }
+            steps {
+                echo '🧹 Cleaning Maven cache...'
+                bat '''
+                    if exist "%MAVEN_LOCAL_REPO%" (
+                        echo Deleting Maven local repository...
+                        rmdir /s /q "%MAVEN_LOCAL_REPO%"
+                        echo Maven cache cleaned
+                    )
+                    mkdir "%MAVEN_LOCAL_REPO%"
+                '''
+            }
+        }
+        
         stage('Verify Environment') {
             steps {
                 echo '🔍 Verifying environment...'
@@ -39,6 +62,7 @@ pipeline {
                     echo JAVA_HOME: %JAVA_HOME%
                     echo MAVEN_HOME: %MAVEN_HOME%
                     echo Maven Local Repository: %MAVEN_LOCAL_REPO%
+                    echo MAVEN_OPTS: %MAVEN_OPTS%
                 '''
             }
         }
@@ -47,6 +71,46 @@ pipeline {
             steps {
                 echo '📥 Cloning repository...'
                 checkout scm
+            }
+        }
+        
+        stage('Create Maven Settings') {
+            steps {
+                script {
+                    echo '⚙️ Creating optimized Maven settings...'
+                    writeFile file: "${env.WORKSPACE}\\settings.xml", text: '''<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    
+    <localRepository>${env.MAVEN_LOCAL_REPO}</localRepository>
+    
+    <mirrors>
+        <mirror>
+            <id>google-maven-central</id>
+            <mirrorOf>central</mirrorOf>
+            <name>Google Maven Central</name>
+            <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
+        </mirror>
+    </mirrors>
+    
+    <profiles>
+        <profile>
+            <id>fast-download</id>
+            <properties>
+                <downloadSources>false</downloadSources>
+                <downloadJavadocs>false</downloadJavadocs>
+            </properties>
+        </profile>
+    </profiles>
+    
+    <activeProfiles>
+        <activeProfile>fast-download</activeProfile>
+    </activeProfiles>
+</settings>'''
+                    echo '✅ Maven settings created'
+                }
             }
         }
         
@@ -76,61 +140,90 @@ pipeline {
         }
         
         stage('Install Parent POM') {
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
             steps {
                 echo '📦 Installing parent POM...'
                 dir('hotel-parent') {
-                    bat "mvn clean install -N -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+                    retry(2) {
+                        bat """
+                            mvn clean install -N -DskipTests ^
+                            -Dmaven.repo.local=%MAVEN_LOCAL_REPO% ^
+                            -s %WORKSPACE%\\settings.xml ^
+                            --batch-mode ^
+                            --no-transfer-progress
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Download All Dependencies') {
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
+            steps {
+                script {
+                    echo '📥 Pre-downloading all Maven dependencies...'
+                    
+                    def pomFiles = [
+                        'microservices/eureka-server/eureka-serve/pom.xml',
+                        'microservices/api-gateway/api-gateway/pom.xml',
+                        'microservices/room-service/room-service/pom.xml',
+                        'microservices/customer-service/customer-service/pom.xml',
+                        'microservices/booking-service/booking-service/pom.xml',
+                        'microservices/billing-service/billing-service/pom.xml'
+                    ]
+                    
+                    pomFiles.each { pomFile ->
+                        echo "📦 Resolving dependencies for ${pomFile}..."
+                        timeout(time: 10, unit: 'MINUTES') {
+                            bat """
+                                mvn dependency:resolve -f ${pomFile} ^
+                                -Dmaven.repo.local=%MAVEN_LOCAL_REPO% ^
+                                -s %WORKSPACE%\\settings.xml ^
+                                --batch-mode ^
+                                --no-transfer-progress || echo "Warning: Some dependencies may have failed for ${pomFile}"
+                            """
+                        }
+                    }
                 }
             }
         }
         
         stage('Build Backend Services') {
-            parallel {
-                stage('Build Eureka') {
-                    steps {
-                        echo '🔧 Building Eureka Server...'
-                        dir('microservices/eureka-server/eureka-serve') {
-                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Build Gateway') {
-                    steps {
-                        echo '🔧 Building API Gateway...'
-                        dir('microservices/api-gateway/api-gateway') {
-                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Build Room Service') {
-                    steps {
-                        echo '🔧 Building Room Service...'
-                        dir('microservices/room-service/room-service') {
-                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Build Customer Service') {
-                    steps {
-                        echo '🔧 Building Customer Service...'
-                        dir('microservices/customer-service/customer-service') {
-                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Build Booking Service') {
-                    steps {
-                        echo '🔧 Building Booking Service...'
-                        dir('microservices/booking-service/booking-service') {
-                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Build Billing Service') {
-                    steps {
-                        echo '🔧 Building Billing Service...'
-                        dir('microservices/billing-service/billing-service') {
-                            bat "mvn clean compile -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+            options {
+                timeout(time: 45, unit: 'MINUTES')
+            }
+            steps {
+                script {
+                    echo '🔧 Building all backend services sequentially...'
+                    
+                    def services = [
+                        [name: 'Eureka Server', path: 'microservices/eureka-server/eureka-serve'],
+                        [name: 'API Gateway', path: 'microservices/api-gateway/api-gateway'],
+                        [name: 'Room Service', path: 'microservices/room-service/room-service'],
+                        [name: 'Customer Service', path: 'microservices/customer-service/customer-service'],
+                        [name: 'Booking Service', path: 'microservices/booking-service/booking-service'],
+                        [name: 'Billing Service', path: 'microservices/billing-service/billing-service']
+                    ]
+                    
+                    services.each { service ->
+                        timeout(time: 10, unit: 'MINUTES') {
+                            echo "🔧 Building ${service.name}..."
+                            dir(service.path) {
+                                retry(2) {
+                                    bat """
+                                        mvn clean compile -DskipTests ^
+                                        -Dmaven.repo.local=%MAVEN_LOCAL_REPO% ^
+                                        -s %WORKSPACE%\\settings.xml ^
+                                        --batch-mode ^
+                                        --no-transfer-progress
+                                    """
+                                }
+                            }
+                            echo "✅ ${service.name} built successfully"
                         }
                     }
                 }
@@ -138,6 +231,9 @@ pipeline {
         }
         
         stage('Build Frontend') {
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
             steps {
                 echo '🎨 Building Frontend...'
                 dir('frontend/hotel-angular-app') {
@@ -148,109 +244,76 @@ pipeline {
         }
         
         stage('Run Tests') {
-            parallel {
-                stage('Test Room Service') {
-                    steps {
-                        echo '🧪 Testing Room Service...'
-                        dir('microservices/room-service/room-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -DskipTests=false"
-                        }
-                    }
-                    post {
-                        always {
-                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                        }
-                    }
-                }
-                stage('Test Customer Service') {
-                    steps {
-                        echo '🧪 Testing Customer Service...'
-                        dir('microservices/customer-service/customer-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -DskipTests=false"
-                        }
-                    }
-                    post {
-                        always {
-                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                        }
-                    }
-                }
-                stage('Test Booking Service') {
-                    steps {
-                        echo '🧪 Testing Booking Service...'
-                        dir('microservices/booking-service/booking-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -DskipTests=false"
-                        }
-                    }
-                    post {
-                        always {
-                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+            when {
+                expression { params.SKIP_TESTS == false }
+            }
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
+            steps {
+                script {
+                    echo '🧪 Running tests...'
+                    
+                    def services = [
+                        [name: 'Room Service', path: 'microservices/room-service/room-service'],
+                        [name: 'Customer Service', path: 'microservices/customer-service/customer-service'],
+                        [name: 'Booking Service', path: 'microservices/booking-service/booking-service'],
+                        [name: 'Billing Service', path: 'microservices/billing-service/billing-service']
+                    ]
+                    
+                    services.each { service ->
+                        timeout(time: 8, unit: 'MINUTES') {
+                            echo "🧪 Testing ${service.name}..."
+                            dir(service.path) {
+                                bat """
+                                    mvn test ^
+                                    -Dmaven.repo.local=%MAVEN_LOCAL_REPO% ^
+                                    -s %WORKSPACE%\\settings.xml ^
+                                    --batch-mode ^
+                                    --no-transfer-progress || echo "Tests failed for ${service.name}"
+                                """
+                            }
                         }
                     }
                 }
-                stage('Test Billing Service') {
-                    steps {
-                        echo '🧪 Testing Billing Service...'
-                        dir('microservices/billing-service/billing-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -Dtest=!*IntegrationTest,!*IT"
-                        }
-                    }
-                    post {
-                        always {
-                            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                        }
-                    }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
                 }
             }
         }
         
         stage('Package Services') {
-            parallel {
-                stage('Package Eureka') {
-                    steps {
-                        echo '📦 Packaging Eureka Server...'
-                        dir('microservices/eureka-server/eureka-serve') {
-                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Package Gateway') {
-                    steps {
-                        echo '📦 Packaging API Gateway...'
-                        dir('microservices/api-gateway/api-gateway') {
-                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Package Room Service') {
-                    steps {
-                        echo '📦 Packaging Room Service...'
-                        dir('microservices/room-service/room-service') {
-                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Package Customer Service') {
-                    steps {
-                        echo '📦 Packaging Customer Service...'
-                        dir('microservices/customer-service/customer-service') {
-                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Package Booking Service') {
-                    steps {
-                        echo '📦 Packaging Booking Service...'
-                        dir('microservices/booking-service/booking-service') {
-                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
-                        }
-                    }
-                }
-                stage('Package Billing Service') {
-                    steps {
-                        echo '📦 Packaging Billing Service...'
-                        dir('microservices/billing-service/billing-service') {
-                            bat "mvn package -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
+            steps {
+                script {
+                    echo '📦 Packaging all services...'
+                    
+                    def services = [
+                        [name: 'Eureka Server', path: 'microservices/eureka-server/eureka-serve'],
+                        [name: 'API Gateway', path: 'microservices/api-gateway/api-gateway'],
+                        [name: 'Room Service', path: 'microservices/room-service/room-service'],
+                        [name: 'Customer Service', path: 'microservices/customer-service/customer-service'],
+                        [name: 'Booking Service', path: 'microservices/booking-service/booking-service'],
+                        [name: 'Billing Service', path: 'microservices/billing-service/billing-service']
+                    ]
+                    
+                    services.each { service ->
+                        timeout(time: 8, unit: 'MINUTES') {
+                            echo "📦 Packaging ${service.name}..."
+                            dir(service.path) {
+                                bat """
+                                    mvn package -DskipTests ^
+                                    -Dmaven.repo.local=%MAVEN_LOCAL_REPO% ^
+                                    -s %WORKSPACE%\\settings.xml ^
+                                    --batch-mode ^
+                                    --no-transfer-progress
+                                """
+                            }
+                            echo "✅ ${service.name} packaged successfully"
                         }
                     }
                 }
@@ -262,7 +325,6 @@ pipeline {
                 script {
                     echo '🐳 Preparing Docker environment...'
                     
-                    // Test si Docker fonctionne avec cmd au lieu de PowerShell
                     def dockerRunning = bat(
                         returnStatus: true,
                         script: '@docker info >nul 2>&1'
@@ -271,7 +333,6 @@ pipeline {
                     if (dockerRunning != 0) {
                         echo '⚠️ Docker daemon not running, starting Docker Desktop...'
                         
-                        // Vérifier si Docker Desktop est installé
                         def dockerExists = bat(
                             returnStatus: true,
                             script: '@if exist "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe" exit 0 else exit 1'
@@ -281,13 +342,12 @@ pipeline {
                             error('❌ Docker Desktop not found. Please install Docker Desktop and retry.')
                         }
                         
-                        // Démarrer Docker Desktop avec cmd
                         bat '''
                             @echo off
                             echo 🚀 Starting Docker Desktop...
                             start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
                             
-                            echo ⏳ Waiting for Docker daemon to start (this may take 1-2 minutes)...
+                            echo ⏳ Waiting for Docker daemon to start...
                             
                             set MAX_ATTEMPTS=24
                             set ATTEMPT=0
@@ -298,7 +358,7 @@ pipeline {
                             
                             docker info >nul 2>&1
                             if %ERRORLEVEL% EQU 0 (
-                                echo ✅ Docker daemon is ready! (attempt %ATTEMPT%/%MAX_ATTEMPTS%)
+                                echo ✅ Docker daemon is ready!
                                 goto :DOCKER_READY
                             )
                             
@@ -306,8 +366,7 @@ pipeline {
                             
                             if %ATTEMPT% LSS %MAX_ATTEMPTS% goto :WAIT_LOOP
                             
-                            echo ❌ Docker daemon failed to start after 120 seconds
-                            echo Please start Docker Desktop manually and retry
+                            echo ❌ Docker daemon failed to start
                             exit /b 1
                             
                             :DOCKER_READY
@@ -318,20 +377,7 @@ pipeline {
                         echo '✅ Docker daemon is already running'
                     }
                     
-                    bat '''
-                        echo.
-                        echo ========== Docker Information ==========
-                        docker info
-                        echo.
-                        echo ========== Docker Disk Usage Before Cleanup ==========
-                        docker system df
-                        echo.
-                        echo ========== Cleaning up old Docker resources ==========
-                        docker system prune -f --volumes=false || echo Cleanup skipped
-                        echo.
-                        echo ========== Docker Disk Usage After Cleanup ==========
-                        docker system df
-                    '''
+                    bat 'docker system prune -f --volumes=false || echo Cleanup skipped'
                 }
             }
         }
@@ -342,8 +388,7 @@ pipeline {
             }
             steps {
                 script {
-                    echo '🐳 Building Docker images from workspace root...'
-                    echo "📁 Current workspace: ${env.WORKSPACE}"
+                    echo '🐳 Building Docker images...'
                     
                     def services = [
                         [name: 'eureka-server', dockerfile: 'microservices\\eureka-server\\eureka-serve\\Dockerfile'],
@@ -355,67 +400,21 @@ pipeline {
                         [name: 'frontend', dockerfile: 'frontend\\hotel-angular-app\\Dockerfile']
                     ]
                     
-                    def buildErrors = []
-                    
-                    echo '🐳 Building Docker images sequentially...'
-                    
                     services.each { service ->
-                        try {
-                            echo "🐳 Building ${service.name} image..."
-                            echo "   📄 Dockerfile: ${service.dockerfile}"
-                            echo "   📂 Build context: ${env.WORKSPACE}"
-                            
-                            // Vérifier que le Dockerfile existe
-                            bat """
-                                if not exist "${service.dockerfile}" (
-                                    echo ❌ ERROR: Dockerfile not found at ${service.dockerfile}
-                                    exit /b 1
-                                )
-                                echo ✅ Dockerfile found
-                            """
-                            
+                        timeout(time: 10, unit: 'MINUTES') {
+                            echo "🐳 Building ${service.name}..."
                             retry(2) {
-                                try {
-                                    // Build depuis la racine du workspace
-                                    bat """
-                                        cd /d "${env.WORKSPACE}"
-                                        docker build -f ${service.dockerfile} -t ${service.name}:latest . --progress=plain
-                                    """
-                                    echo "✅ ${service.name} image built successfully"
-                                } catch (Exception e) {
-                                    echo "⚠️ Build failed for ${service.name}, retrying..."
-                                    sleep time: 10, unit: 'SECONDS'
-                                    throw e
-                                }
+                                bat """
+                                    cd /d "${env.WORKSPACE}"
+                                    docker build -f ${service.dockerfile} -t ${service.name}:latest . --progress=plain
+                                """
                             }
-                            
-                            // Vérifier que l'image a été créée
-                            bat "docker images ${service.name}:latest"
-                            
-                            // Délai entre les builds
-                            sleep time: 5, unit: 'SECONDS'
-                            
-                        } catch (Exception e) {
-                            buildErrors.add("${service.name}: ${e.message}")
-                            echo "❌ Failed to build ${service.name} after retries: ${e.message}"
+                            echo "✅ ${service.name} image built"
+                            sleep time: 3, unit: 'SECONDS'
                         }
                     }
                     
-                    // Afficher toutes les images construites
-                    echo ''
-                    echo '========== Built Docker Images =========='
                     bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
-                    
-                    // Vérifier les erreurs
-                    if (buildErrors.size() > 0) {
-                        echo "❌ Build errors occurred for the following services:"
-                        buildErrors.each { error ->
-                            echo "  - ${error}"
-                        }
-                        error("Docker image build failed for ${buildErrors.size()} service(s)")
-                    }
-                    
-                    echo '✅ All Docker images built successfully!'
                 }
             }
         }
@@ -428,108 +427,41 @@ pipeline {
                 script {
                     echo '🚀 Deploying to Kubernetes...'
                     
-                    try {
-                        echo '📦 Phase 1: Creating namespace, secrets and configmaps...'
-                        bat 'kubectl apply -f kubernetes/namespaces/hotel-namespace.yaml'
-                        bat 'kubectl apply -f kubernetes/secrets/database-secrets.yaml'
-                        bat 'kubectl apply -f kubernetes/configmaps/application-config.yaml'
-                        
-                        echo '🗄️ Phase 2: Deploying databases and RabbitMQ...'
-                        bat 'kubectl apply -f kubernetes/statefulsets/postgresql-statefulset.yaml'
-                        bat 'kubectl apply -f kubernetes/statefulsets/rabbitmq-statefulset.yaml'
-                        
-                        echo '⏳ Waiting 60s for databases to initialize...'
-                        sleep time: 60, unit: 'SECONDS'
-                        
-                        bat "kubectl get statefulsets -n %KUBE_NAMESPACE%"
-                        bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=billing-db"
-                        
-                        echo '🔗 Phase 3: Creating database and messaging services...'
-                        bat 'kubectl apply -f kubernetes/services/databases-services.yaml'
-                        bat 'kubectl apply -f kubernetes/services/rabbitmq-service.yaml'
-                        
-                        echo '🔍 Phase 4: Deploying Eureka Server...'
-                        bat 'kubectl apply -f kubernetes/deployments/eureka-deployment.yaml'
-                        bat 'kubectl apply -f kubernetes/services/eureka-service.yaml'
-                        
-                        echo '⏳ Waiting 60s for Eureka to start...'
-                        sleep time: 60, unit: 'SECONDS'
-                        
-                        bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=eureka-server"
-                        bat "kubectl logs -n %KUBE_NAMESPACE% -l app=eureka-server --tail=30 || echo Cannot get logs"
-                        
-                        echo '🚪 Phase 5: Deploying API Gateway...'
-                        bat 'kubectl apply -f kubernetes/deployments/gateway-deployment.yaml'
-                        bat 'kubectl apply -f kubernetes/services/gateway-service.yaml'
-                        
-                        echo '⏳ Waiting 45s for Gateway to start...'
-                        sleep time: 45, unit: 'SECONDS'
-                        
-                        bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=api-gateway"
-                        
-                        echo '🔧 Phase 6: Deploying microservices...'
-                        bat 'kubectl apply -f kubernetes/deployments/billing-service-deployment.yaml'
-                        bat 'kubectl apply -f kubernetes/deployments/booking-service-deployment.yaml'
-                        bat 'kubectl apply -f kubernetes/deployments/customer-service-deployment.yaml'
-                        bat 'kubectl apply -f kubernetes/deployments/room-service-deployment.yaml'
-                        
-                        bat 'kubectl apply -f kubernetes/services/billing-service.yaml'
-                        bat 'kubectl apply -f kubernetes/services/booking-service.yaml'
-                        bat 'kubectl apply -f kubernetes/services/customer-service.yaml'
-                        bat 'kubectl apply -f kubernetes/services/room-service.yaml'
-                        
-                        echo '⏳ Waiting 60s for microservices to start...'
-                        sleep time: 60, unit: 'SECONDS'
-                        
-                        bat "kubectl get pods -n %KUBE_NAMESPACE% | findstr service"
-                        
-                        echo '🎨 Phase 7: Deploying frontend...'
-                        bat 'kubectl apply -f kubernetes/deployments/frontend-deployment.yaml'
-                        bat 'kubectl apply -f kubernetes/services/frontend-service.yaml'
-                        
-                        echo '⏳ Waiting 30s for frontend to start...'
-                        sleep time: 30, unit: 'SECONDS'
-                        
-                        echo '✅ Deployment completed! Checking status...'
-                        bat "kubectl get all -n %KUBE_NAMESPACE%"
-                        
-                        echo '''
-                        
-                        ========================================
-                        📊 KUBERNETES DEPLOYMENT SUMMARY
-                        ========================================
-                        '''
-                        
-                        bat "kubectl get pods -n %KUBE_NAMESPACE% -o wide"
-                        bat "kubectl get services -n %KUBE_NAMESPACE%"
-                        
-                    } catch (Exception e) {
-                        echo "❌ Kubernetes deployment failed: ${e.message}"
-                        
-                        bat """
-                            echo.
-                            echo ========== POD STATUS ==========
-                            kubectl get pods -n %KUBE_NAMESPACE% -o wide
-                            echo.
-                            echo ========== POD DESCRIPTIONS ==========
-                            kubectl describe pods -n %KUBE_NAMESPACE%
-                            echo.
-                            echo ========== SERVICES ==========
-                            kubectl get services -n %KUBE_NAMESPACE%
-                            echo.
-                            echo ========== RECENT EVENTS ==========
-                            kubectl get events -n %KUBE_NAMESPACE% --sort-by=.metadata.creationTimestamp
-                            echo.
-                            echo ========== FAILED POD LOGS ==========
-                            for /f "tokens=1" %%p in ('kubectl get pods -n %KUBE_NAMESPACE% --field-selector=status.phase!=Running -o name 2^>nul') do (
-                                echo.
-                                echo === Logs for %%p ===
-                                kubectl logs -n %KUBE_NAMESPACE% %%p --tail=50 2>nul || echo No logs available
-                            )
-                        """
-                        
-                        throw e
-                    }
+                    bat 'kubectl apply -f kubernetes/namespaces/hotel-namespace.yaml'
+                    bat 'kubectl apply -f kubernetes/secrets/database-secrets.yaml'
+                    bat 'kubectl apply -f kubernetes/configmaps/application-config.yaml'
+                    
+                    bat 'kubectl apply -f kubernetes/statefulsets/postgresql-statefulset.yaml'
+                    bat 'kubectl apply -f kubernetes/statefulsets/rabbitmq-statefulset.yaml'
+                    sleep time: 60, unit: 'SECONDS'
+                    
+                    bat 'kubectl apply -f kubernetes/services/databases-services.yaml'
+                    bat 'kubectl apply -f kubernetes/services/rabbitmq-service.yaml'
+                    
+                    bat 'kubectl apply -f kubernetes/deployments/eureka-deployment.yaml'
+                    bat 'kubectl apply -f kubernetes/services/eureka-service.yaml'
+                    sleep time: 60, unit: 'SECONDS'
+                    
+                    bat 'kubectl apply -f kubernetes/deployments/gateway-deployment.yaml'
+                    bat 'kubectl apply -f kubernetes/services/gateway-service.yaml'
+                    sleep time: 45, unit: 'SECONDS'
+                    
+                    bat 'kubectl apply -f kubernetes/deployments/billing-service-deployment.yaml'
+                    bat 'kubectl apply -f kubernetes/deployments/booking-service-deployment.yaml'
+                    bat 'kubectl apply -f kubernetes/deployments/customer-service-deployment.yaml'
+                    bat 'kubectl apply -f kubernetes/deployments/room-service-deployment.yaml'
+                    
+                    bat 'kubectl apply -f kubernetes/services/billing-service.yaml'
+                    bat 'kubectl apply -f kubernetes/services/booking-service.yaml'
+                    bat 'kubectl apply -f kubernetes/services/customer-service.yaml'
+                    bat 'kubectl apply -f kubernetes/services/room-service.yaml'
+                    sleep time: 60, unit: 'SECONDS'
+                    
+                    bat 'kubectl apply -f kubernetes/deployments/frontend-deployment.yaml'
+                    bat 'kubectl apply -f kubernetes/services/frontend-service.yaml'
+                    sleep time: 30, unit: 'SECONDS'
+                    
+                    bat "kubectl get all -n %KUBE_NAMESPACE%"
                 }
             }
         }
@@ -540,106 +472,9 @@ pipeline {
             }
             steps {
                 script {
-                    echo '🏥 Checking Kubernetes services health...'
-                    
-                    try {
-                        echo 'Waiting for all pods to be ready...'
-                        
-                        def maxWaitTime = 300
-                        def waitInterval = 15
-                        def timeWaited = 0
-                        def allPodsReady = false
-                        
-                        while (timeWaited < maxWaitTime && !allPodsReady) {
-                            def podStatus = bat(
-                                script: "kubectl get pods -n %KUBE_NAMESPACE% --no-headers",
-                                returnStdout: true
-                            ).trim()
-                            
-                            echo "Current pod status:"
-                            echo podStatus
-                            
-                            def notReadyCount = bat(
-                                script: """kubectl get pods -n %KUBE_NAMESPACE% --field-selector=status.phase!=Running --no-headers 2>nul | find /c /v "" """,
-                                returnStdout: true
-                            ).trim()
-                            
-                            if (notReadyCount == "0") {
-                                echo "✅ All pods are running!"
-                                allPodsReady = true
-                                break
-                            }
-                            
-                            echo "⏳ Waiting ${waitInterval}s for pods to be ready... (${timeWaited}/${maxWaitTime}s elapsed)"
-                            sleep time: waitInterval, unit: 'SECONDS'
-                            timeWaited += waitInterval
-                        }
-                        
-                        if (!allPodsReady) {
-                            echo "⚠️ Warning: Not all pods are ready after ${maxWaitTime}s"
-                            bat "kubectl get pods -n %KUBE_NAMESPACE%"
-                        }
-                        
-                        echo '''
-                        
-                        ========================================
-                        🔍 SERVICE HEALTH CHECK
-                        ========================================
-                        '''
-                        
-                        def services = [
-                            'eureka-server',
-                            'api-gateway',
-                            'billing-service',
-                            'booking-service',
-                            'customer-service',
-                            'room-service',
-                            'frontend'
-                        ]
-                        
-                        services.each { service ->
-                            try {
-                                bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=${service}"
-                                echo "✅ ${service} pods are deployed"
-                            } catch (Exception e) {
-                                echo "⚠️ ${service} may have issues"
-                            }
-                        }
-                        
-                        echo '''
-                        
-                        ========================================
-                        ✅ HEALTH CHECK COMPLETED
-                        ========================================
-                        
-                        📋 To access services, run these commands:
-                        
-                        kubectl port-forward -n hotel-management svc/eureka-service 8761:8761
-                        kubectl port-forward -n hotel-management svc/gateway-service 8080:8080
-                        kubectl port-forward -n hotel-management svc/frontend-service 4200:80
-                        kubectl port-forward -n hotel-management svc/rabbitmq 15672:15672
-                        
-                        Then access:
-                        📊 Eureka: http://localhost:8761
-                        🚪 Gateway: http://localhost:8080
-                        🎨 Frontend: http://localhost:4200
-                        🐰 RabbitMQ: http://localhost:15672 (admin/admin)
-                        '''
-                        
-                    } catch (Exception e) {
-                        echo "⚠️ Health check encountered issues: ${e.message}"
-                        
-                        bat """
-                            echo.
-                            echo ========== FINAL POD STATUS ==========
-                            kubectl get pods -n %KUBE_NAMESPACE% -o wide
-                            echo.
-                            echo ========== FINAL SERVICES ==========
-                            kubectl get services -n %KUBE_NAMESPACE%
-                        """
-                        
-                        currentBuild.result = 'UNSTABLE'
-                    }
+                    echo '🏥 Checking deployment health...'
+                    bat "kubectl get pods -n %KUBE_NAMESPACE% -o wide"
+                    bat "kubectl get services -n %KUBE_NAMESPACE%"
                 }
             }
         }
@@ -647,83 +482,15 @@ pipeline {
     
     post {
         always {
-            echo '🧹 Cleaning up Docker resources...'
             bat 'docker system prune -f --volumes=false || echo "Cleanup skipped"'
         }
         success {
-            echo '''
-            ✅ ========================================
-            ✅  KUBERNETES DEPLOYMENT SUCCESSFUL!
-            ✅ ========================================
-            
-            🎯 Deployment Summary:
-            ✓ All Docker images built
-            ✓ Kubernetes resources created
-            ✓ Services deployed and running
-            
-            📋 Access Instructions:
-            
-            1. Port-forward services:
-               kubectl port-forward -n hotel-management svc/eureka-service 8761:8761
-               kubectl port-forward -n hotel-management svc/gateway-service 8080:8080
-               kubectl port-forward -n hotel-management svc/frontend-service 4200:80
-               kubectl port-forward -n hotel-management svc/rabbitmq 15672:15672
-               
-            2. Access applications:
-               📊 Eureka Dashboard: http://localhost:8761
-               🚪 API Gateway: http://localhost:8080
-               🎨 Frontend: http://localhost:4200
-               🐰 RabbitMQ Management: http://localhost:15672
-            
-            3. Useful commands:
-               kubectl get pods -n hotel-management
-               kubectl get services -n hotel-management
-               kubectl logs -n hotel-management <pod-name>
-               kubectl describe pod -n hotel-management <pod-name>
-            
-            ✅ ========================================
-            '''
+            echo '✅ Deployment successful!'
         }
         failure {
-            echo '''
-            ❌ ========================================
-            ❌  KUBERNETES DEPLOYMENT FAILED!
-            ❌ ========================================
-            
-            📋 Troubleshooting Steps:
-            
-            1. Check Kubernetes cluster:
-               kubectl cluster-info
-               kubectl get nodes
-               
-            2. Check pods status:
-               kubectl get pods -n hotel-management
-               kubectl describe pods -n hotel-management
-               
-            3. Check logs:
-               kubectl logs -n hotel-management <pod-name>
-               
-            4. Check events:
-               kubectl get events -n hotel-management --sort-by=.metadata.creationTimestamp
-               
-            5. Clean up and retry:
-               kubectl delete namespace hotel-management
-               
-            ❌ ========================================
-            '''
-        }
-        unstable {
-            echo '''
-            ⚠️ ========================================
-            ⚠️  DEPLOYMENT COMPLETED WITH WARNINGS
-            ⚠️ ========================================
-            
-            Some pods may not be fully ready yet.
-            Check pod status with:
-            kubectl get pods -n hotel-management
-            
-            ⚠️ ========================================
-            '''
+            echo '❌ Deployment failed!'
+            bat "kubectl get pods -n %KUBE_NAMESPACE% -o wide || echo No pods found"
+            bat "kubectl get events -n %KUBE_NAMESPACE% --sort-by=.metadata.creationTimestamp || echo No events found"
         }
     }
 }

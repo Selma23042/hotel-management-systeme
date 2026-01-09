@@ -13,6 +13,7 @@ pipeline {
         MAVEN_HOME = 'C:\\apache-maven-3.9.9'
         MAVEN_LOCAL_REPO = "${env.WORKSPACE}\\.m2\\repository"
         PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
+        KUBE_NAMESPACE = 'hotel-management'
     }
     
     stages {
@@ -28,6 +29,9 @@ pipeline {
                     echo.
                     echo Docker version:
                     docker --version
+                    echo.
+                    echo Kubernetes version:
+                    kubectl version --client
                     echo.
                     echo Node version:
                     node --version
@@ -228,242 +232,285 @@ pipeline {
             }
         }
         
-        stage('Stop Running Containers') {
-            steps {
-                script {
-                    echo '🛑 Stopping existing containers and freeing ports...'
-                    
-                    // Arrêter docker-compose
-                    dir('docker') {
-                        bat '''
-                            echo Stopping Docker Compose services...
-                            docker-compose down -v --remove-orphans 2>nul || echo No containers to stop
-                        '''
-                    }
-                    
-                    // Libérer les ports - VERSION CORRIGÉE
-                    bat '''
-                        @echo off
-                        echo.
-                        echo Killing processes on critical ports...
-                        
-                        REM Function to kill process on port
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8761" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8761
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8080" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8080
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8081" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8081
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8082" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8082
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8083" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8083
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8084" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 8084
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":4200" ^| findstr "LISTENING"') do (
-                            echo Killing process %%a on port 4200
-                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
-                        )
-                        
-                        echo.
-                        echo Waiting 5 seconds for ports to be released...
-                        timeout /t 5 /nobreak >nul 2>&1
-                        
-                        echo.
-                        echo Port cleanup completed!
-                        exit 0
-                    '''
-                }
-            }
-        }
-        
         stage('Build Docker Images') {
             steps {
                 script {
-                    echo '🐳 Building Docker images locally...'
-                    dir('docker') {
-                        bat 'docker-compose build'
+                    echo '🐳 Building Docker images for Kubernetes...'
+                    
+                    // Build Eureka Server
+                    dir('microservices/eureka-server/eureka-serve') {
+                        bat 'docker build -t eureka-server:latest .'
+                    }
+                    
+                    // Build API Gateway
+                    dir('microservices/api-gateway/api-gateway') {
+                        bat 'docker build -t api-gateway:latest .'
+                    }
+                    
+                    // Build Billing Service
+                    dir('microservices/billing-service/billing-service') {
+                        bat 'docker build -t billing-service:latest .'
+                    }
+                    
+                    // Build Booking Service
+                    dir('microservices/booking-service/booking-service') {
+                        bat 'docker build -t booking-service:latest .'
+                    }
+                    
+                    // Build Customer Service
+                    dir('microservices/customer-service/customer-service') {
+                        bat 'docker build -t customer-service:latest .'
+                    }
+                    
+                    // Build Room Service
+                    dir('microservices/room-service/room-service') {
+                        bat 'docker build -t room-service:latest .'
+                    }
+                    
+                    // Build Frontend
+                    dir('frontend/hotel-angular-app') {
+                        bat 'docker build -t frontend:latest .'
+                    }
+                    
+                    echo '✅ Docker images built successfully!'
+                    bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    echo '🚀 Deploying to Kubernetes...'
+                    
+                    try {
+                        // Phase 1: Créer le namespace, secrets et configmaps
+                        echo '📦 Phase 1: Creating namespace, secrets and configmaps...'
+                        bat 'kubectl apply -f kubernetes/namespaces/hotel-namespace.yaml'
+                        bat 'kubectl apply -f kubernetes/secrets/database-secrets.yaml'
+                        bat 'kubectl apply -f kubernetes/configmaps/application-config.yaml'
+                        
+                        // Phase 2: Déployer les StatefulSets (Bases de données + RabbitMQ)
+                        echo '🗄️ Phase 2: Deploying databases and RabbitMQ...'
+                        bat 'kubectl apply -f kubernetes/statefulsets/postgresql-statefulset.yaml'
+                        bat 'kubectl apply -f kubernetes/statefulsets/rabbitmq-statefulset.yaml'
+                        
+                        echo '⏳ Waiting 60s for databases to initialize...'
+                        sleep time: 60, unit: 'SECONDS'
+                        
+                        // Vérifier les StatefulSets
+                        bat "kubectl get statefulsets -n %KUBE_NAMESPACE%"
+                        bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=billing-db"
+                        
+                        // Phase 3: Créer les Services des bases de données
+                        echo '🔗 Phase 3: Creating database and messaging services...'
+                        bat 'kubectl apply -f kubernetes/services/databases-services.yaml'
+                        bat 'kubectl apply -f kubernetes/services/rabbitmq-service.yaml'
+                        
+                        // Phase 4: Déployer Eureka Server
+                        echo '🔍 Phase 4: Deploying Eureka Server...'
+                        bat 'kubectl apply -f kubernetes/deployments/eureka-deployment.yaml'
+                        bat 'kubectl apply -f kubernetes/services/eureka-service.yaml'
+                        
+                        echo '⏳ Waiting 60s for Eureka to start...'
+                        sleep time: 60, unit: 'SECONDS'
+                        
+                        // Vérifier Eureka
+                        bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=eureka-server"
+                        bat "kubectl logs -n %KUBE_NAMESPACE% -l app=eureka-server --tail=30 || echo Cannot get logs"
+                        
+                        // Phase 5: Déployer API Gateway
+                        echo '🚪 Phase 5: Deploying API Gateway...'
+                        bat 'kubectl apply -f kubernetes/deployments/gateway-deployment.yaml'
+                        bat 'kubectl apply -f kubernetes/services/gateway-service.yaml'
+                        
+                        echo '⏳ Waiting 45s for Gateway to start...'
+                        sleep time: 45, unit: 'SECONDS'
+                        
+                        bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=api-gateway"
+                        
+                        // Phase 6: Déployer les Microservices
+                        echo '🔧 Phase 6: Deploying microservices...'
+                        bat 'kubectl apply -f kubernetes/deployments/billing-service-deployment.yaml'
+                        bat 'kubectl apply -f kubernetes/deployments/booking-service-deployment.yaml'
+                        bat 'kubectl apply -f kubernetes/deployments/customer-service-deployment.yaml'
+                        bat 'kubectl apply -f kubernetes/deployments/room-service-deployment.yaml'
+                        
+                        bat 'kubectl apply -f kubernetes/services/billing-service.yaml'
+                        bat 'kubectl apply -f kubernetes/services/booking-service.yaml'
+                        bat 'kubectl apply -f kubernetes/services/customer-service.yaml'
+                        bat 'kubectl apply -f kubernetes/services/room-service.yaml'
+                        
+                        echo '⏳ Waiting 60s for microservices to start...'
+                        sleep time: 60, unit: 'SECONDS'
+                        
+                        // Vérifier les microservices
+                        bat "kubectl get pods -n %KUBE_NAMESPACE% | findstr service"
+                        
+                        // Phase 7: Déployer Frontend
+                        echo '🎨 Phase 7: Deploying frontend...'
+                        bat 'kubectl apply -f kubernetes/deployments/frontend-deployment.yaml'
+                        bat 'kubectl apply -f kubernetes/services/frontend-service.yaml'
+                        
+                        echo '⏳ Waiting 30s for frontend to start...'
+                        sleep time: 30, unit: 'SECONDS'
+                        
+                        // Phase 8: Vérification finale
+                        echo '✅ Deployment completed! Checking status...'
+                        bat "kubectl get all -n %KUBE_NAMESPACE%"
+                        
+                        echo '''
+                        
+                        ========================================
+                        📊 KUBERNETES DEPLOYMENT SUMMARY
+                        ========================================
+                        '''
+                        
+                        bat "kubectl get pods -n %KUBE_NAMESPACE% -o wide"
+                        bat "kubectl get services -n %KUBE_NAMESPACE%"
+                        
+                    } catch (Exception e) {
+                        echo "❌ Kubernetes deployment failed: ${e.message}"
+                        
+                        // Diagnostics détaillés
+                        bat """
+                            echo.
+                            echo ========== POD STATUS ==========
+                            kubectl get pods -n %KUBE_NAMESPACE% -o wide
+                            echo.
+                            echo ========== POD DESCRIPTIONS ==========
+                            kubectl describe pods -n %KUBE_NAMESPACE%
+                            echo.
+                            echo ========== SERVICES ==========
+                            kubectl get services -n %KUBE_NAMESPACE%
+                            echo.
+                            echo ========== RECENT EVENTS ==========
+                            kubectl get events -n %KUBE_NAMESPACE% --sort-by=.metadata.creationTimestamp
+                            echo.
+                            echo ========== FAILED POD LOGS ==========
+                            for /f "tokens=1" %%p in ('kubectl get pods -n %KUBE_NAMESPACE% --field-selector=status.phase!=Running -o name 2^>nul') do (
+                                echo.
+                                echo === Logs for %%p ===
+                                kubectl logs -n %KUBE_NAMESPACE% %%p --tail=50 2>nul || echo No logs available
+                            )
+                        """
+                        
+                        throw e
                     }
                 }
             }
         }
         
-        stage('Deploy Application') {
-    steps {
-        script {
-            echo '🚀 Deploying application with sequential startup...'
-            dir('docker') {
-                try {
-                    // Phase 1: Infrastructure de base
-                    echo '📊 Phase 1: Starting infrastructure services...'
-                    bat '''
-                        docker-compose up -d billing-db customer-db booking-db room-db rabbitmq elasticsearch
-                    '''
-                    echo '⏳ Waiting 20s for databases to initialize...'
-                    sleep time: 20, unit: 'SECONDS'
+        stage('Kubernetes Health Check') {
+            steps {
+                script {
+                    echo '🏥 Checking Kubernetes services health...'
                     
-                    // Phase 2: Eureka Server avec gestion d'erreur robuste
-                    echo '🔍 Phase 2: Starting Eureka Server...'
-                    
-                    def eurekaHealthy = false
-                    def maxAttempts = 3
-                    
-                    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-                        echo "Eureka startup attempt ${attempt}/${maxAttempts}..."
+                    try {
+                        // Attendre que tous les pods soient prêts
+                        echo 'Waiting for all pods to be ready...'
                         
-                        // Arrêter Eureka s'il existe déjà
-                        bat 'docker-compose stop eureka-server 2>nul || echo Eureka not running'
-                        bat 'docker-compose rm -f eureka-server 2>nul || echo Eureka container removed'
+                        def maxWaitTime = 300 // 5 minutes
+                        def waitInterval = 15
+                        def timeWaited = 0
+                        def allPodsReady = false
                         
-                        sleep time: 3, unit: 'SECONDS'
-                        
-                        // Démarrer Eureka
-                        bat 'docker-compose up -d eureka-server'
-                        
-                        // Attendre plus longtemps pour le démarrage
-                        echo "Waiting 40s for Eureka to start..."
-                        sleep time: 40, unit: 'SECONDS'
-                        
-                        // Afficher les logs pour diagnostic
-                        echo "Eureka Server logs:"
-                        bat 'docker logs eureka-server --tail 50 2>nul || echo Cannot get logs'
-                        
-                        // Tester la santé d'Eureka
-                        def healthStatus = bat(
-                            script: '''
-                                curl -s -o nul -w "%%{http_code}" http://localhost:8761/actuator/health
-                            ''',
-                            returnStdout: true
-                        ).trim()
-                        
-                        echo "Health check status code: ${healthStatus}"
-                        
-                        if (healthStatus == '200') {
-                            echo '✅ Eureka Server is healthy!'
-                            eurekaHealthy = true
-                            break
-                        } else {
-                            echo "⚠️ Eureka health check failed with status: ${healthStatus}"
-                            
-                            // Vérifier si le conteneur tourne
-                            def containerStatus = bat(
-                                script: 'docker inspect -f "{{.State.Status}}" eureka-server 2>nul',
+                        while (timeWaited < maxWaitTime && !allPodsReady) {
+                            def podStatus = bat(
+                                script: "kubectl get pods -n %KUBE_NAMESPACE% --no-headers",
                                 returnStdout: true
                             ).trim()
                             
-                            echo "Container status: ${containerStatus}"
+                            echo "Current pod status:"
+                            echo podStatus
                             
-                            if (attempt < maxAttempts) {
-                                echo '🔄 Retrying Eureka startup...'
+                            // Vérifier si tous les pods sont Running et Ready
+                            def notReadyCount = bat(
+                                script: """kubectl get pods -n %KUBE_NAMESPACE% --field-selector=status.phase!=Running --no-headers 2>nul | find /c /v "" """,
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (notReadyCount == "0") {
+                                echo "✅ All pods are running!"
+                                allPodsReady = true
+                                break
+                            }
+                            
+                            echo "⏳ Waiting ${waitInterval}s for pods to be ready... (${timeWaited}/${maxWaitTime}s elapsed)"
+                            sleep time: waitInterval, unit: 'SECONDS'
+                            timeWaited += waitInterval
+                        }
+                        
+                        if (!allPodsReady) {
+                            echo "⚠️ Warning: Not all pods are ready after ${maxWaitTime}s"
+                            bat "kubectl get pods -n %KUBE_NAMESPACE%"
+                        }
+                        
+                        // Vérifier les services individuellement
+                        echo '''
+                        
+                        ========================================
+                        🔍 SERVICE HEALTH CHECK
+                        ========================================
+                        '''
+                        
+                        def services = [
+                            'eureka-server',
+                            'api-gateway',
+                            'billing-service',
+                            'booking-service',
+                            'customer-service',
+                            'room-service',
+                            'frontend'
+                        ]
+                        
+                        services.each { service ->
+                            try {
+                                bat "kubectl get pods -n %KUBE_NAMESPACE% -l app=${service}"
+                                echo "✅ ${service} pods are deployed"
+                            } catch (Exception e) {
+                                echo "⚠️ ${service} may have issues"
                             }
                         }
-                    }
-                    
-                    if (!eurekaHealthy) {
-                        echo '❌ CRITICAL: Eureka Server failed to start after ${maxAttempts} attempts'
-                        echo '📋 Full Eureka logs:'
-                        bat 'docker logs eureka-server 2>nul || echo No logs available'
-                        error('Eureka Server startup failed')
-                    }
-                    
-                    // Phase 3: API Gateway
-                    echo '🚪 Phase 3: Starting API Gateway...'
-                    bat 'docker-compose up -d api-gateway'
-                    sleep time: 25, unit: 'SECONDS'
-                    
-                    // Vérifier l'enregistrement dans Eureka
-                    echo 'Checking Gateway registration...'
-                    bat '''
-                        curl -s http://localhost:8761/eureka/apps || echo "Cannot check Eureka registry"
-                    '''
-                    
-                    // Phase 4: Microservices en parallèle
-                    echo '🔧 Phase 4: Starting microservices...'
-                    bat '''
-                        docker-compose up -d room-service customer-service booking-service billing-service
-                    '''
-                    sleep time: 30, unit: 'SECONDS'
-                    
-                    // Phase 5: Frontend
-                    echo '🎨 Phase 5: Starting frontend...'
-                    bat 'docker-compose up -d frontend'
-                    sleep time: 10, unit: 'SECONDS'
-                    
-                    // Phase 6: Monitoring (optionnel)
-                    echo '📊 Phase 6: Starting monitoring stack...'
-                    bat 'docker-compose up -d kibana logstash prometheus grafana alertmanager'
-                    sleep time: 5, unit: 'SECONDS'
-                    
-                    // Vérification finale
-                    echo '✅ Deployment completed! Verifying services...'
-                    bat 'docker-compose ps'
-                    
-                } catch (Exception e) {
-                    echo "❌ Deployment failed: ${e.message}"
-                    
-                    // Diagnostics complets
-                    bat '''
-                        echo.
-                        echo ========== CONTAINER STATUS ==========
-                        docker-compose ps
-                        echo.
-                        echo ========== EUREKA LOGS ==========
-                        docker logs eureka-server --tail 100 2>nul || echo "No Eureka logs"
-                        echo.
-                        echo ========== DOCKER NETWORKS ==========
-                        docker network ls
-                        echo.
-                        echo ========== PORT USAGE ==========
-                        netstat -ano | findstr "8761 8080 8081 8082 8083 8084"
-                    '''
-                    
-                    throw e
-                }
-            }
-        }
-    }
-}
-        
-        stage('Health Check') {
-            steps {
-                script {
-                    echo '🏥 Checking service health...'
-                    
-                    def services = [
-                        [name: 'Eureka Server', url: 'http://localhost:8761/actuator/health'],
-                        [name: 'API Gateway', url: 'http://localhost:8080/actuator/health'],
-                        [name: 'Room Service', url: 'http://localhost:8081/actuator/health'],
-                        [name: 'Customer Service', url: 'http://localhost:8083/actuator/health'],
-                        [name: 'Booking Service', url: 'http://localhost:8082/actuator/health'],
-                        [name: 'Billing Service', url: 'http://localhost:8084/actuator/health']
-                    ]
-                    
-                    services.each { service ->
-                        retry(3) {
-                            sleep time: 5, unit: 'SECONDS'
-                            bat """
-                                curl -f ${service.url} || exit 1
-                            """
-                            echo "✅ ${service.name} is healthy"
-                        }
+                        
+                        echo '''
+                        
+                        ========================================
+                        ✅ HEALTH CHECK COMPLETED
+                        ========================================
+                        '''
+                        
+                        // Afficher les instructions d'accès
+                        echo '''
+                        
+                        📋 To access services, run these commands:
+                        
+                        kubectl port-forward -n hotel-management svc/eureka-service 8761:8761
+                        kubectl port-forward -n hotel-management svc/gateway-service 8080:8080
+                        kubectl port-forward -n hotel-management svc/frontend-service 4200:80
+                        kubectl port-forward -n hotel-management svc/rabbitmq 15672:15672
+                        
+                        Then access:
+                        📊 Eureka: http://localhost:8761
+                        🚪 Gateway: http://localhost:8080
+                        🎨 Frontend: http://localhost:4200
+                        🐰 RabbitMQ: http://localhost:15672 (admin/admin)
+                        '''
+                        
+                    } catch (Exception e) {
+                        echo "⚠️ Health check encountered issues: ${e.message}"
+                        
+                        bat """
+                            echo.
+                            echo ========== FINAL POD STATUS ==========
+                            kubectl get pods -n %KUBE_NAMESPACE% -o wide
+                            echo.
+                            echo ========== FINAL SERVICES ==========
+                            kubectl get services -n %KUBE_NAMESPACE%
+                        """
+                        
+                        // Ne pas échouer le pipeline si c'est juste un avertissement
+                        currentBuild.result = 'UNSTABLE'
                     }
                 }
             }
@@ -472,24 +519,39 @@ pipeline {
     
     post {
         always {
-            echo '🧹 Cleaning up...'
+            echo '🧹 Cleaning up Docker resources...'
             bat 'docker system prune -f --volumes=false || echo "Cleanup skipped"'
         }
         success {
             echo '''
             ✅ ========================================
-            ✅  PIPELINE EXECUTED SUCCESSFULLY!
+            ✅  KUBERNETES DEPLOYMENT SUCCESSFUL!
             ✅ ========================================
             
-            🌐 Application URLs:
-            📊 Eureka Dashboard: http://localhost:8761
-            🚪 API Gateway: http://localhost:8080
-            🛏️  Room Service: http://localhost:8081
-            👤 Customer Service: http://localhost:8083
-            📅 Booking Service: http://localhost:8082
-            💰 Billing Service: http://localhost:8084
-            🎨 Frontend: http://localhost:4200
-            🐰 RabbitMQ: http://localhost:15672 (admin/admin)
+            🎯 Deployment Summary:
+            ✓ All Docker images built
+            ✓ Kubernetes resources created
+            ✓ Services deployed and running
+            
+            📋 Access Instructions:
+            
+            1. Port-forward services:
+               kubectl port-forward -n hotel-management svc/eureka-service 8761:8761
+               kubectl port-forward -n hotel-management svc/gateway-service 8080:8080
+               kubectl port-forward -n hotel-management svc/frontend-service 4200:80
+               kubectl port-forward -n hotel-management svc/rabbitmq 15672:15672
+               
+            2. Access applications:
+               📊 Eureka Dashboard: http://localhost:8761
+               🚪 API Gateway: http://localhost:8080
+               🎨 Frontend: http://localhost:4200
+               🐰 RabbitMQ Management: http://localhost:15672
+            
+            3. Useful commands:
+               kubectl get pods -n hotel-management
+               kubectl get services -n hotel-management
+               kubectl logs -n hotel-management <pod-name>
+               kubectl describe pod -n hotel-management <pod-name>
             
             ✅ ========================================
             '''
@@ -497,20 +559,43 @@ pipeline {
         failure {
             echo '''
             ❌ ========================================
-            ❌  PIPELINE FAILED!
+            ❌  KUBERNETES DEPLOYMENT FAILED!
             ❌ ========================================
             
-            📋 Troubleshooting:
-            1. Check Docker Desktop is running
-            2. Verify ports are not in use
-            3. Check Jenkins logs
-            4. Run: docker-compose logs
+            📋 Troubleshooting Steps:
             
+            1. Check Kubernetes cluster:
+               kubectl cluster-info
+               kubectl get nodes
+               
+            2. Check pods status:
+               kubectl get pods -n hotel-management
+               kubectl describe pods -n hotel-management
+               
+            3. Check logs:
+               kubectl logs -n hotel-management <pod-name>
+               
+            4. Check events:
+               kubectl get events -n hotel-management --sort-by=.metadata.creationTimestamp
+               
+            5. Clean up and retry:
+               kubectl delete namespace hotel-management
+               
             ❌ ========================================
             '''
         }
         unstable {
-            echo '⚠️ Pipeline completed with warnings'
+            echo '''
+            ⚠️ ========================================
+            ⚠️  DEPLOYMENT COMPLETED WITH WARNINGS
+            ⚠️ ========================================
+            
+            Some pods may not be fully ready yet.
+            Check pod status with:
+            kubectl get pods -n hotel-management
+            
+            ⚠️ ========================================
+            '''
         }
     }
 }

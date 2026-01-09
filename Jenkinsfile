@@ -262,83 +262,58 @@ pipeline {
                 script {
                     echo '🐳 Preparing Docker environment...'
                     
-                    def dockerRunning = powershell(
+                    // Test si Docker fonctionne avec cmd au lieu de PowerShell
+                    def dockerRunning = bat(
                         returnStatus: true,
-                        script: '''
-                            try {
-                                docker info 2>&1 | Out-Null
-                                exit 0
-                            } catch {
-                                exit 1
-                            }
-                        '''
+                        script: '@docker info >nul 2>&1'
                     )
                     
                     if (dockerRunning != 0) {
                         echo '⚠️ Docker daemon not running, starting Docker Desktop...'
                         
-                        def startResult = powershell(
+                        // Vérifier si Docker Desktop est installé
+                        def dockerExists = bat(
                             returnStatus: true,
-                            script: '''
-                                $ErrorActionPreference = "Stop"
-                                
-                                Write-Host "🔍 Checking if Docker Desktop is already running..."
-                                $dockerProcess = Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
-                                
-                                if ($dockerProcess) {
-                                    Write-Host "⚠️ Docker Desktop process found but daemon not responding. Killing process..."
-                                    $dockerProcess | Stop-Process -Force
-                                    Start-Sleep -Seconds 10
-                                }
-                                
-                                Write-Host "🚀 Starting Docker Desktop..."
-                                $dockerPath = "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
-                                
-                                if (-not (Test-Path $dockerPath)) {
-                                    Write-Host "❌ Docker Desktop not found at: $dockerPath"
-                                    Write-Host "Please install Docker Desktop or update the path"
-                                    exit 1
-                                }
-                                
-                                Start-Process $dockerPath -WindowStyle Hidden
-                                Write-Host "⏳ Waiting for Docker daemon to start (this may take 1-2 minutes)..."
-                                
-                                $maxAttempts = 24
-                                $attempt = 0
-                                $dockerReady = $false
-                                
-                                while ($attempt -lt $maxAttempts) {
-                                    Start-Sleep -Seconds 5
-                                    $attempt++
-                                    
-                                    try {
-                                        $result = docker info 2>&1
-                                        if ($LASTEXITCODE -eq 0) {
-                                            Write-Host "✅ Docker daemon is ready! (attempt $attempt/$maxAttempts)"
-                                            $dockerReady = $true
-                                            break
-                                        }
-                                    } catch {
-                                        # Continue waiting
-                                    }
-                                    
-                                    Write-Host "⏳ Still waiting for Docker... (attempt $attempt/$maxAttempts)"
-                                }
-                                
-                                if (-not $dockerReady) {
-                                    Write-Host "❌ Docker daemon failed to start after $($maxAttempts * 5) seconds"
-                                    Write-Host "Please start Docker Desktop manually and retry"
-                                    exit 1
-                                }
-                                
-                                Write-Host "✅ Docker Desktop started successfully!"
-                                exit 0
-                            '''
+                            script: '@if exist "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe" exit 0 else exit 1'
                         )
                         
-                        if (startResult != 0) {
-                            error("❌ Failed to start Docker Desktop. Please start Docker Desktop manually and retry the build.")
+                        if (dockerExists != 0) {
+                            error('❌ Docker Desktop not found. Please install Docker Desktop and retry.')
                         }
+                        
+                        // Démarrer Docker Desktop avec cmd
+                        bat '''
+                            @echo off
+                            echo 🚀 Starting Docker Desktop...
+                            start "" "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
+                            
+                            echo ⏳ Waiting for Docker daemon to start (this may take 1-2 minutes)...
+                            
+                            set MAX_ATTEMPTS=24
+                            set ATTEMPT=0
+                            
+                            :WAIT_LOOP
+                            timeout /t 5 /nobreak >nul 2>&1
+                            set /a ATTEMPT+=1
+                            
+                            docker info >nul 2>&1
+                            if %ERRORLEVEL% EQU 0 (
+                                echo ✅ Docker daemon is ready! (attempt %ATTEMPT%/%MAX_ATTEMPTS%)
+                                goto :DOCKER_READY
+                            )
+                            
+                            echo ⏳ Still waiting for Docker... (attempt %ATTEMPT%/%MAX_ATTEMPTS%)
+                            
+                            if %ATTEMPT% LSS %MAX_ATTEMPTS% goto :WAIT_LOOP
+                            
+                            echo ❌ Docker daemon failed to start after 120 seconds
+                            echo Please start Docker Desktop manually and retry
+                            exit /b 1
+                            
+                            :DOCKER_READY
+                            echo ✅ Docker Desktop started successfully!
+                        '''
+                        
                     } else {
                         echo '✅ Docker daemon is already running'
                     }
@@ -352,7 +327,7 @@ pipeline {
                         docker system df
                         echo.
                         echo ========== Cleaning up old Docker resources ==========
-                        docker system prune -f --volumes=false || echo "Cleanup skipped"
+                        docker system prune -f --volumes=false || echo Cleanup skipped
                         echo.
                         echo ========== Docker Disk Usage After Cleanup ==========
                         docker system df

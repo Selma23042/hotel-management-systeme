@@ -227,8 +227,73 @@ pipeline {
                 }
             }
         }
-   
-}
+        
+        stage('Stop Running Containers') {
+            steps {
+                script {
+                    echo '🛑 Stopping existing containers and freeing ports...'
+                    
+                    // Arrêter docker-compose
+                    dir('docker') {
+                        bat '''
+                            echo Stopping Docker Compose services...
+                            docker-compose down -v --remove-orphans 2>nul || echo No containers to stop
+                        '''
+                    }
+                    
+                    // Libérer les ports - VERSION CORRIGÉE
+                    bat '''
+                        @echo off
+                        echo.
+                        echo Killing processes on critical ports...
+                        
+                        REM Function to kill process on port
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8761" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 8761
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8080" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 8080
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8081" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 8081
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8082" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 8082
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8083" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 8083
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8084" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 8084
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":4200" ^| findstr "LISTENING"') do (
+                            echo Killing process %%a on port 4200
+                            taskkill /F /PID %%a 2>nul || echo Process %%a already terminated
+                        )
+                        
+                        echo.
+                        echo Waiting 5 seconds for ports to be released...
+                        timeout /t 5 /nobreak >nul 2>&1
+                        
+                        echo.
+                        echo Port cleanup completed!
+                        exit 0
+                    '''
+                }
+            }
+        }
         
         stage('Build Docker Images') {
             steps {

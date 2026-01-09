@@ -231,7 +231,20 @@ pipeline {
                 }
             }
         }
-        
+        stage('Restart Docker Daemon') {
+    steps {
+        script {
+            echo '🔄 Restarting Docker daemon...'
+            bat '''
+                net stop com.docker.service
+                timeout /t 5
+                net start com.docker.service
+                timeout /t 10
+                docker info
+            '''
+        }
+    }
+}
         stage('Prepare Docker Environment') {
             steps {
                 script {

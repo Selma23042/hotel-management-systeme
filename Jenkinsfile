@@ -347,13 +347,13 @@ pipeline {
                     echo '🐳 Building Docker images sequentially...'
                     
                     def services = [
-                        [name: 'eureka-server', dockerfile: 'microservices/eureka-server/eureka-serve/Dockerfile'],
-                        [name: 'api-gateway', dockerfile: 'microservices/api-gateway/api-gateway/Dockerfile'],
-                        [name: 'billing-service', dockerfile: 'microservices/billing-service/billing-service/Dockerfile'],
-                        [name: 'booking-service', dockerfile: 'microservices/booking-service/booking-service/Dockerfile'],
-                        [name: 'customer-service', dockerfile: 'microservices/customer-service/customer-service/Dockerfile'],
-                        [name: 'room-service', dockerfile: 'microservices/room-service/room-service/Dockerfile'],
-                        [name: 'frontend', dockerfile: 'frontend/hotel-angular-app/Dockerfile']
+                        [name: 'eureka-server', path: 'microservices/eureka-server/eureka-serve'],
+                        [name: 'api-gateway', path: 'microservices/api-gateway/api-gateway'],
+                        [name: 'billing-service', path: 'microservices/billing-service/billing-service'],
+                        [name: 'booking-service', path: 'microservices/booking-service/booking-service'],
+                        [name: 'customer-service', path: 'microservices/customer-service/customer-service'],
+                        [name: 'room-service', path: 'microservices/room-service/room-service'],
+                        [name: 'frontend', path: 'frontend/hotel-angular-app']
                     ]
                     
                     def buildErrors = []
@@ -363,8 +363,12 @@ pipeline {
                             echo "🐳 Building ${service.name} image..."
                             retry(2) {
                                 try {
-                                    // Build depuis la racine du projet avec le context et dockerfile spécifiques
-                                    bat "docker build -f ${service.dockerfile} -t ${service.name}:latest . --progress=plain"
+                                    // Build from PROJECT ROOT with context pointing to root (.)
+                                    // and dockerfile in the service subdirectory
+                                    bat """
+                                        cd ${env.WORKSPACE}
+                                        docker build -f ${service.path}/Dockerfile -t ${service.name}:latest . --progress=plain
+                                    """
                                     echo "✅ ${service.name} image built successfully"
                                 } catch (Exception e) {
                                     echo "⚠️ Build failed for ${service.name}, retrying..."

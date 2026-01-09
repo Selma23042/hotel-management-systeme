@@ -317,3 +317,5 @@ This generated password is for development use only. Your security configuration
 2026-01-09 01:01:59 [DiscoveryClient-InstanceInfoReplicator-0] INFO  c.netflix.discovery.DiscoveryClient - DiscoveryClient_CUSTOMER-SERVICE/localhost:customer-service:8083 - registration status: 204
 2026-01-09 01:02:00 [main] INFO  o.s.cloud.commons.util.InetUtils - Cannot determine local hostname
 2026-01-09 01:02:00 [main] INFO  c.h.c.CustomerServiceApplication - Started CustomerServiceApplication in 16.223 seconds (process running for 16.878)
+2026-01-09 01:06:58 [AsyncResolver-bootstrap-executor-0] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 01:11:58 [AsyncResolver-bootstrap-executor-0] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration

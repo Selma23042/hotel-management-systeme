@@ -232,111 +232,46 @@ pipeline {
             }
         }
         
-        stage('Prepare Docker Environment') {
-            steps {
-                script {
-                    echo '🐳 Preparing Docker environment...'
-                    
-                    // Vérifier si Docker est fonctionnel
-                    def dockerRunning = powershell(
-                        returnStatus: true,
-                        script: '''
-                            try {
-                                docker info 2>&1 | Out-Null
-                                exit 0
-                            } catch {
-                                exit 1
-                            }
-                        '''
-                    )
-                    
-                    if (dockerRunning != 0) {
-                        echo '⚠️ Docker daemon not running, starting Docker Desktop...'
-                        
-                        def startResult = powershell(
-                            returnStatus: true,
-                            script: '''
-                                $ErrorActionPreference = "Stop"
-                                
-                                Write-Host "🔍 Checking if Docker Desktop is already running..."
-                                $dockerProcess = Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
-                                
-                                if ($dockerProcess) {
-                                    Write-Host "⚠️ Docker Desktop process found but daemon not responding. Killing process..."
-                                    $dockerProcess | Stop-Process -Force
-                                    Start-Sleep -Seconds 10
-                                }
-                                
-                                Write-Host "🚀 Starting Docker Desktop..."
-                                $dockerPath = "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
-                                
-                                if (-not (Test-Path $dockerPath)) {
-                                    Write-Host "❌ Docker Desktop not found at: $dockerPath"
-                                    Write-Host "Please install Docker Desktop or update the path"
-                                    exit 1
-                                }
-                                
-                                Start-Process $dockerPath -WindowStyle Hidden
-                                Write-Host "⏳ Waiting for Docker daemon to start (this may take 1-2 minutes)..."
-                                
-                                $maxAttempts = 24
-                                $attempt = 0
-                                $dockerReady = $false
-                                
-                                while ($attempt -lt $maxAttempts) {
-                                    Start-Sleep -Seconds 5
-                                    $attempt++
-                                    
-                                    try {
-                                        $result = docker info 2>&1
-                                        if ($LASTEXITCODE -eq 0) {
-                                            Write-Host "✅ Docker daemon is ready! (attempt $attempt/$maxAttempts)"
-                                            $dockerReady = $true
-                                            break
-                                        }
-                                    } catch {
-                                        # Continuer à attendre
-                                    }
-                                    
-                                    Write-Host "⏳ Still waiting for Docker... (attempt $attempt/$maxAttempts)"
-                                }
-                                
-                                if (-not $dockerReady) {
-                                    Write-Host "❌ Docker daemon failed to start after $($maxAttempts * 5) seconds"
-                                    Write-Host "Please start Docker Desktop manually and retry"
-                                    exit 1
-                                }
-                                
-                                Write-Host "✅ Docker Desktop started successfully!"
-                                exit 0
-                            '''
-                        )
-                        
-                        if (startResult != 0) {
-                            error("❌ Failed to start Docker Desktop. Please start Docker Desktop manually and retry the build.")
-                        }
-                    } else {
-                        echo '✅ Docker daemon is already running'
-                    }
-                    
-                    // Afficher l'état de Docker
-                    bat '''
-                        echo.
-                        echo ========== Docker Information ==========
-                        docker info
-                        echo.
-                        echo ========== Docker Disk Usage Before Cleanup ==========
-                        docker system df
-                        echo.
-                        echo ========== Cleaning up old Docker resources ==========
-                        docker system prune -f --volumes=false || echo "Cleanup skipped"
-                        echo.
-                        echo ========== Docker Disk Usage After Cleanup ==========
-                        docker system df
-                    '''
-                }
+    stage('Prepare Docker Environment') {
+    steps {
+        script {
+            echo '🐳 Vérification si Docker fonctionne...'
+            
+            def dockerPath = 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'
+
+            // Vérifier si Docker est déjà en cours d'exécution
+            def dockerRunning = bat(
+                script: "tasklist /FI \"IMAGENAME eq Docker Desktop.exe\" 2>NUL | find /I \"Docker Desktop.exe\" > NUL && echo true || echo false",
+                returnStdout: true
+            ).trim()
+
+            if (dockerRunning == "false") {
+                echo '⚠️ Docker n\'est pas en cours d\'exécution, démarrage de Docker Desktop...'
+                bat "\"$dockerPath\""
+                echo '🚀 Docker Desktop démarré !'
+            } else {
+                echo '✅ Docker est déjà en cours d\'exécution.'
             }
+            
+            // Afficher l'état de Docker
+            bat '''
+                echo.
+                echo ========== Informations Docker ==========
+                docker info
+                echo.
+                echo ========== Utilisation du disque avant nettoyage ==========
+                docker system df
+                echo.
+                echo ========== Nettoyage des anciennes ressources Docker ==========
+                docker system prune -f --volumes=false || echo "Nettoyage ignoré"
+                echo.
+                echo ========== Utilisation du disque après nettoyage ==========
+                docker system df
+            '''
         }
+    }
+}
+
         
         stage('Build Docker Images') {
             options {

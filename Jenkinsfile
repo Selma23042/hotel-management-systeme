@@ -167,7 +167,6 @@ pipeline {
                     steps {
                         echo '🧪 Testing Billing Service...'
                         dir('microservices/billing-service/billing-service') {
-                            // Skip integration tests that require Docker, only run unit tests
                             bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -Dtest=!*IntegrationTest,!*IT"
                         }
                     }
@@ -233,97 +232,82 @@ pipeline {
             }
         }
         
+        stage('Prepare Docker Environment') {
+            steps {
+                script {
+                    echo '🐳 Preparing Docker environment...'
+                    bat '''
+                        echo Checking Docker daemon status...
+                        docker info
+                        echo.
+                        echo Docker disk usage before cleanup:
+                        docker system df
+                        echo.
+                        echo Cleaning up old Docker resources...
+                        docker system prune -f --volumes=false || echo "Cleanup skipped"
+                        echo.
+                        echo Docker disk usage after cleanup:
+                        docker system df
+                    '''
+                }
+            }
+        }
+        
         stage('Build Docker Images') {
             options {
-                timeout(time: 30, unit: 'MINUTES')
+                timeout(time: 60, unit: 'MINUTES')
             }
-            parallel {
-                stage('Build Eureka') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building Eureka Server image...'
-                        dir('microservices/eureka-server/eureka-serve') {
-                            bat 'docker build -t eureka-server:latest . --progress=plain --no-cache'
+            steps {
+                script {
+                    echo '🐳 Building Docker images sequentially...'
+                    
+                    def services = [
+                        [name: 'eureka-server', path: 'microservices/eureka-server/eureka-serve'],
+                        [name: 'api-gateway', path: 'microservices/api-gateway/api-gateway'],
+                        [name: 'billing-service', path: 'microservices/billing-service/billing-service'],
+                        [name: 'booking-service', path: 'microservices/booking-service/booking-service'],
+                        [name: 'customer-service', path: 'microservices/customer-service/customer-service'],
+                        [name: 'room-service', path: 'microservices/room-service/room-service'],
+                        [name: 'frontend', path: 'frontend/hotel-angular-app']
+                    ]
+                    
+                    def buildErrors = []
+                    
+                    services.each { service ->
+                        try {
+                            echo "🐳 Building ${service.name} image..."
+                            dir(service.path) {
+                                retry(2) {
+                                    try {
+                                        bat "docker build -t ${service.name}:latest . --progress=plain"
+                                        echo "✅ ${service.name} image built successfully"
+                                    } catch (Exception e) {
+                                        echo "⚠️ Build failed for ${service.name}, retrying..."
+                                        // Wait a bit before retry
+                                        sleep time: 10, unit: 'SECONDS'
+                                        throw e
+                                    }
+                                }
+                            }
+                            
+                            // Small delay between builds to avoid overwhelming Docker
+                            sleep time: 5, unit: 'SECONDS'
+                            
+                        } catch (Exception e) {
+                            buildErrors.add("${service.name}: ${e.message}")
+                            echo "❌ Failed to build ${service.name} after retries: ${e.message}"
                         }
                     }
-                }
-                
-                stage('Build Gateway') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building API Gateway image...'
-                        dir('microservices/api-gateway/api-gateway') {
-                            bat 'docker build -t api-gateway:latest . --progress=plain --no-cache'
+                    
+                    // Check if there were any build errors
+                    if (buildErrors.size() > 0) {
+                        echo "❌ Build errors occurred for the following services:"
+                        buildErrors.each { error ->
+                            echo "  - ${error}"
                         }
+                        error("Docker image build failed for ${buildErrors.size()} service(s)")
                     }
-                }
-                
-                stage('Build Billing Service') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building Billing Service image...'
-                        dir('microservices/billing-service/billing-service') {
-                            bat 'docker build -t billing-service:latest . --progress=plain --no-cache'
-                        }
-                    }
-                }
-                
-                stage('Build Booking Service') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building Booking Service image...'
-                        dir('microservices/booking-service/booking-service') {
-                            bat 'docker build -t booking-service:latest . --progress=plain --no-cache'
-                        }
-                    }
-                }
-                
-                stage('Build Customer Service') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building Customer Service image...'
-                        dir('microservices/customer-service/customer-service') {
-                            bat 'docker build -t customer-service:latest . --progress=plain --no-cache'
-                        }
-                    }
-                }
-                
-                stage('Build Room Service') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building Room Service image...'
-                        dir('microservices/room-service/room-service') {
-                            bat 'docker build -t room-service:latest . --progress=plain --no-cache'
-                        }
-                    }
-                }
-                
-                stage('Build Frontend') {
-                    options {
-                        timeout(time: 10, unit: 'MINUTES')
-                    }
-                    steps {
-                        echo '🐳 Building Frontend image...'
-                        dir('frontend/hotel-angular-app') {
-                            bat 'docker build -t frontend:latest . --progress=plain --no-cache'
-                        }
-                    }
-                }
-            }
-            post {
-                success {
+                    
                     echo '✅ All Docker images built successfully!'
                     bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
                 }

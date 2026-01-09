@@ -128,7 +128,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Room Service...'
                         dir('microservices/room-service/room-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -DskipTests=false"
                         }
                     }
                     post {
@@ -141,7 +141,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Customer Service...'
                         dir('microservices/customer-service/customer-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -DskipTests=false"
                         }
                     }
                     post {
@@ -154,7 +154,7 @@ pipeline {
                     steps {
                         echo '🧪 Testing Booking Service...'
                         dir('microservices/booking-service/booking-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -DskipTests=false"
                         }
                     }
                     post {
@@ -167,7 +167,8 @@ pipeline {
                     steps {
                         echo '🧪 Testing Billing Service...'
                         dir('microservices/billing-service/billing-service') {
-                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+                            // Skip integration tests that require Docker, only run unit tests
+                            bat "mvn test -Dmaven.repo.local=%MAVEN_LOCAL_REPO% -Dtest=!*IntegrationTest,!*IT"
                         }
                     }
                     post {

@@ -2,6 +2,7 @@
 FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
+# Copier le pom parent et l'installer dans le repository Maven local
 COPY hotel-parent/pom.xml ./parent-pom.xml
 RUN mvn install:install-file \
     -Dfile=./parent-pom.xml \
@@ -10,8 +11,9 @@ RUN mvn install:install-file \
     -Dversion=0.0.1-SNAPSHOT \
     -Dpackaging=pom
 
-COPY microservices/customer-service/customer-service/pom.xml ./customer-service/pom.xml
-COPY microservices/customer-service/customer-service/src ./customer-service/src
+# Copier le pom du service Customer Service
+COPY microservices/customer-service/pom.xml ./customer-service/pom.xml
+COPY microservices/customer-service/src ./customer-service/src
 
 WORKDIR /app/customer-service
 RUN mvn clean package -DskipTests

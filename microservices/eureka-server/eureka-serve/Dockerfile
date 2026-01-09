@@ -11,13 +11,13 @@ RUN mvn install:install-file \
     -Dversion=0.0.1-SNAPSHOT \
     -Dpackaging=pom
 
-# Copier le pom du service (attention au chemin: eureka-server/eureka-serve/)
-COPY microservices/eureka-server/eureka-serve/pom.xml ./eureka-server/pom.xml
+# Copier le pom du service eureka-server
+COPY microservices/eureka-server/pom.xml ./eureka-server/pom.xml
 
-# Copier les sources
-COPY microservices/eureka-server/eureka-serve/src ./eureka-server/src
+# Copier les sources du service eureka-server
+COPY microservices/eureka-server/src ./eureka-server/src
 
-# Build
+# Build du service eureka-server
 WORKDIR /app/eureka-server
 RUN mvn clean package -DskipTests
 
@@ -25,12 +25,14 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
+# Copier l'artefact JAR généré dans le stage de build
 COPY --from=build /app/eureka-server/target/*.jar app.jar
 
 EXPOSE 8761
 
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
 
+# Vérification de santé
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8761/actuator/health || exit 1
 

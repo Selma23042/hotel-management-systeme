@@ -50,6 +50,31 @@ pipeline {
             }
         }
         
+        stage('Verify Project Structure') {
+            steps {
+                echo '🔍 Verifying project structure...'
+                bat '''
+                    echo Current directory:
+                    cd
+                    echo.
+                    echo Workspace contents:
+                    dir /b
+                    echo.
+                    echo Checking hotel-parent:
+                    dir /b hotel-parent
+                    echo.
+                    echo Checking microservices:
+                    dir /b microservices
+                    echo.
+                    echo Checking eureka-server:
+                    dir /b microservices\\eureka-server\\eureka-serve
+                    echo.
+                    echo Checking frontend:
+                    dir /b frontend\\hotel-angular-app
+                '''
+            }
+        }
+        
         stage('Install Parent POM') {
             steps {
                 echo '📦 Installing parent POM...'
@@ -343,49 +368,68 @@ pipeline {
             steps {
                 script {
                     echo '🐳 Building Docker images from workspace root...'
+                    echo "📁 Current workspace: ${env.WORKSPACE}"
                     
                     def services = [
-                        [name: 'eureka-server', path: 'microservices\\eureka-server\\eureka-serve'],
-                        [name: 'api-gateway', path: 'microservices\\api-gateway\\api-gateway'],
-                        [name: 'billing-service', path: 'microservices\\billing-service\\billing-service'],
-                        [name: 'booking-service', path: 'microservices\\booking-service\\booking-service'],
-                        [name: 'customer-service', path: 'microservices\\customer-service\\customer-service'],
-                        [name: 'room-service', path: 'microservices\\room-service\\room-service'],
-                        [name: 'frontend', path: 'frontend\\hotel-angular-app']
+                        [name: 'eureka-server', dockerfile: 'microservices\\eureka-server\\eureka-serve\\Dockerfile'],
+                        [name: 'api-gateway', dockerfile: 'microservices\\api-gateway\\api-gateway\\Dockerfile'],
+                        [name: 'billing-service', dockerfile: 'microservices\\billing-service\\billing-service\\Dockerfile'],
+                        [name: 'booking-service', dockerfile: 'microservices\\booking-service\\booking-service\\Dockerfile'],
+                        [name: 'customer-service', dockerfile: 'microservices\\customer-service\\customer-service\\Dockerfile'],
+                        [name: 'room-service', dockerfile: 'microservices\\room-service\\room-service\\Dockerfile'],
+                        [name: 'frontend', dockerfile: 'frontend\\hotel-angular-app\\Dockerfile']
                     ]
                     
                     def buildErrors = []
                     
-                    // Revenir à la racine du workspace
-                    dir(env.WORKSPACE) {
-                        services.each { service ->
-                            try {
-                                echo "🐳 Building ${service.name} image..."
-                                echo "   Dockerfile: ${service.path}\\Dockerfile"
-                                echo "   Context: ${env.WORKSPACE}"
-                                
-                                retry(2) {
-                                    try {
-                                        bat """
-                                            docker build -f ${service.path}\\Dockerfile -t ${service.name}:latest . --progress=plain
-                                        """
-                                        echo "✅ ${service.name} image built successfully"
-                                    } catch (Exception e) {
-                                        echo "⚠️ Build failed for ${service.name}, retrying..."
-                                        sleep time: 10, unit: 'SECONDS'
-                                        throw e
-                                    }
+                    echo '🐳 Building Docker images sequentially...'
+                    
+                    services.each { service ->
+                        try {
+                            echo "🐳 Building ${service.name} image..."
+                            echo "   📄 Dockerfile: ${service.dockerfile}"
+                            echo "   📂 Build context: ${env.WORKSPACE}"
+                            
+                            // Vérifier que le Dockerfile existe
+                            bat """
+                                if not exist "${service.dockerfile}" (
+                                    echo ❌ ERROR: Dockerfile not found at ${service.dockerfile}
+                                    exit /b 1
+                                )
+                                echo ✅ Dockerfile found
+                            """
+                            
+                            retry(2) {
+                                try {
+                                    // Build depuis la racine du workspace
+                                    bat """
+                                        cd /d "${env.WORKSPACE}"
+                                        docker build -f ${service.dockerfile} -t ${service.name}:latest . --progress=plain
+                                    """
+                                    echo "✅ ${service.name} image built successfully"
+                                } catch (Exception e) {
+                                    echo "⚠️ Build failed for ${service.name}, retrying..."
+                                    sleep time: 10, unit: 'SECONDS'
+                                    throw e
                                 }
-                                
-                                // Délai entre les builds
-                                sleep time: 5, unit: 'SECONDS'
-                                
-                            } catch (Exception e) {
-                                buildErrors.add("${service.name}: ${e.message}")
-                                echo "❌ Failed to build ${service.name} after retries: ${e.message}"
                             }
+                            
+                            // Vérifier que l'image a été créée
+                            bat "docker images ${service.name}:latest"
+                            
+                            // Délai entre les builds
+                            sleep time: 5, unit: 'SECONDS'
+                            
+                        } catch (Exception e) {
+                            buildErrors.add("${service.name}: ${e.message}")
+                            echo "❌ Failed to build ${service.name} after retries: ${e.message}"
                         }
                     }
+                    
+                    // Afficher toutes les images construites
+                    echo ''
+                    echo '========== Built Docker Images =========='
+                    bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
                     
                     // Vérifier les erreurs
                     if (buildErrors.size() > 0) {
@@ -397,7 +441,6 @@ pipeline {
                     }
                     
                     echo '✅ All Docker images built successfully!'
-                    bat 'docker images | findstr "eureka-server api-gateway billing-service booking-service customer-service room-service frontend"'
                 }
             }
         }

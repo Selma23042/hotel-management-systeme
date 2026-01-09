@@ -20,3 +20,102 @@
 2026-01-09 01:38:09 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
 2026-01-09 01:40:41 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m10s264ms710µs800ns).
 2026-01-09 01:43:50 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 05:56:55 [main] INFO  c.h.b.BookingServiceApplication - Starting BookingServiceApplication using Java 21.0.5 with PID 904 (C:\Users\HP\hotel-management-systeme\microservices\booking-service\booking-service\target\classes started by HP in C:\Users\HP\hotel-management-systeme\microservices\booking-service\booking-service)
+2026-01-09 05:56:55 [main] DEBUG c.h.b.BookingServiceApplication - Running with Spring Boot v3.2.1, Spring v6.1.2
+2026-01-09 05:56:55 [main] INFO  c.h.b.BookingServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2026-01-09 05:56:56 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-09 05:56:56 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 125 ms. Found 1 JPA repository interface.
+2026-01-09 05:56:56 [main] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=01a108d9-74ba-3aca-85d4-8dcb374960c2
+2026-01-09 05:56:57 [main] WARN  o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [lbRestClientPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+2026-01-09 05:56:57 [main] WARN  o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'deferringLoadBalancerInterceptor' of type [org.springframework.cloud.client.loadbalancer.DeferringLoadBalancerInterceptor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2026-01-09 05:56:57 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2026-01-09 05:56:57 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-09 05:56:57 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.17]
+2026-01-09 05:56:57 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-01-09 05:56:57 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 2171 ms
+2026-01-09 05:56:58 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-09 05:56:58 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-01-09 05:56:58 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@4509b7
+2026-01-09 05:56:58 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-01-09 05:56:58 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-09 05:57:00 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-09 05:57:00 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-09 05:57:01 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-09 05:57:02 [main] INFO  o.s.cloud.commons.util.InetUtils - Cannot determine local hostname
+2026-01-09 05:57:02 [main] INFO  o.s.c.o.FeignClientFactoryBean - For 'room-service' URL not provided. Will try picking an instance via load-balancing.
+2026-01-09 05:57:02 [main] INFO  o.s.c.o.FeignClientFactoryBean - For 'customer-service' URL not provided. Will try picking an instance via load-balancing.
+2026-01-09 05:57:05 [main] INFO  o.s.cloud.commons.util.InetUtils - Cannot determine local hostname
+2026-01-09 05:57:05 [main] INFO  o.s.c.n.e.c.DiscoveryClientOptionalArgsConfiguration - Eureka HTTP Client uses RestTemplate.
+2026-01-09 05:57:05 [main] WARN  o.s.c.l.c.LoadBalancerCacheAutoConfiguration$LoadBalancerCaffeineWarnLogger - Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-01-09 05:57:05 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 4 endpoint(s) beneath base path '/actuator'
+2026-01-09 05:57:05 [main] INFO  o.s.c.n.eureka.InstanceInfoFactory - Setting initial instance status as: STARTING
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Initializing Eureka in region us-east-1
+2026-01-09 05:57:05 [main] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Disable delta property : false
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Single vip registry refresh property : null
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Force full registry fetch : false
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Application is null : false
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Registered Applications size is zero : true
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Application version is -1: true
+2026-01-09 05:57:05 [main] INFO  c.netflix.discovery.DiscoveryClient - Getting all instance registry info from the eureka server
+2026-01-09 05:58:26 [main] INFO  o.a.h.c.h.i.c.HttpRequestRetryExec - Recoverable I/O exception (java.net.SocketException) caught when processing request to {}->http://localhost:8761
+2026-01-09 06:01:06 [main] INFO  c.h.b.BookingServiceApplication - Starting BookingServiceApplication using Java 21.0.5 with PID 27600 (C:\Users\HP\hotel-management-systeme\microservices\booking-service\booking-service\target\classes started by HP in C:\Users\HP\hotel-management-systeme\microservices\booking-service\booking-service)
+2026-01-09 06:01:06 [main] DEBUG c.h.b.BookingServiceApplication - Running with Spring Boot v3.2.1, Spring v6.1.2
+2026-01-09 06:01:06 [main] INFO  c.h.b.BookingServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2026-01-09 06:01:07 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-09 06:01:07 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 168 ms. Found 1 JPA repository interface.
+2026-01-09 06:01:08 [main] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=01a108d9-74ba-3aca-85d4-8dcb374960c2
+2026-01-09 06:01:08 [main] WARN  o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig' of type [org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration$DeferringLoadBalancerInterceptorConfig] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). The currently created BeanPostProcessor [lbRestClientPostProcessor] is declared through a non-static factory method on that class; consider declaring it as static instead.
+2026-01-09 06:01:08 [main] WARN  o.s.c.s.PostProcessorRegistrationDelegate$BeanPostProcessorChecker - Bean 'deferringLoadBalancerInterceptor' of type [org.springframework.cloud.client.loadbalancer.DeferringLoadBalancerInterceptor] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [lbRestClientPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.
+2026-01-09 06:01:09 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2026-01-09 06:01:09 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-09 06:01:09 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.17]
+2026-01-09 06:01:09 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-01-09 06:01:09 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 3077 ms
+2026-01-09 06:01:10 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-09 06:01:10 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-01-09 06:01:10 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@560be8c0
+2026-01-09 06:01:10 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-01-09 06:01:10 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-09 06:01:11 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-09 06:01:12 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-09 06:01:12 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-09 06:01:14 [main] INFO  o.s.cloud.commons.util.InetUtils - Cannot determine local hostname
+2026-01-09 06:01:14 [main] INFO  o.s.c.o.FeignClientFactoryBean - For 'room-service' URL not provided. Will try picking an instance via load-balancing.
+2026-01-09 06:01:14 [main] INFO  o.s.c.o.FeignClientFactoryBean - For 'customer-service' URL not provided. Will try picking an instance via load-balancing.
+2026-01-09 06:01:18 [main] INFO  o.s.cloud.commons.util.InetUtils - Cannot determine local hostname
+2026-01-09 06:01:18 [main] INFO  o.s.c.n.e.c.DiscoveryClientOptionalArgsConfiguration - Eureka HTTP Client uses RestTemplate.
+2026-01-09 06:01:18 [main] WARN  o.s.c.l.c.LoadBalancerCacheAutoConfiguration$LoadBalancerCaffeineWarnLogger - Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-01-09 06:01:18 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 4 endpoint(s) beneath base path '/actuator'
+2026-01-09 06:01:18 [main] INFO  o.s.c.n.eureka.InstanceInfoFactory - Setting initial instance status as: STARTING
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Initializing Eureka in region us-east-1
+2026-01-09 06:01:18 [main] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Disable delta property : false
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Single vip registry refresh property : null
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Force full registry fetch : false
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Application is null : false
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Registered Applications size is zero : true
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Application version is -1: true
+2026-01-09 06:01:18 [main] INFO  c.netflix.discovery.DiscoveryClient - Getting all instance registry info from the eureka server
+2026-01-09 06:01:19 [main] INFO  c.netflix.discovery.DiscoveryClient - The response status is 200
+2026-01-09 06:01:19 [main] INFO  c.netflix.discovery.DiscoveryClient - Starting heartbeat executor: renew interval is: 30
+2026-01-09 06:01:19 [main] INFO  c.n.discovery.InstanceInfoReplicator - InstanceInfoReplicator onDemand update allowed rate per min is 4
+2026-01-09 06:01:19 [main] INFO  c.netflix.discovery.DiscoveryClient - Discovery Client initialized at timestamp 1767934879490 with initial instances count: 1
+2026-01-09 06:01:19 [main] INFO  o.s.c.n.e.s.EurekaServiceRegistry - Registering application BOOKING-SERVICE with eureka with status UP
+2026-01-09 06:01:19 [main] INFO  c.netflix.discovery.DiscoveryClient - Saw local status change event StatusChangeEvent [timestamp=1767934879525, current=UP, previous=STARTING]
+2026-01-09 06:01:19 [DiscoveryClient-InstanceInfoReplicator-%d] INFO  c.netflix.discovery.DiscoveryClient - DiscoveryClient_BOOKING-SERVICE/localhost:booking-service:8082: registering service...
+2026-01-09 06:01:19 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8082 (http) with context path ''
+2026-01-09 06:01:19 [main] INFO  o.s.c.n.e.s.EurekaAutoServiceRegistration - Updating port to 8082
+2026-01-09 06:01:19 [DiscoveryClient-InstanceInfoReplicator-%d] INFO  c.netflix.discovery.DiscoveryClient - DiscoveryClient_BOOKING-SERVICE/localhost:booking-service:8082 - registration status: 204
+2026-01-09 06:01:20 [main] INFO  o.s.cloud.commons.util.InetUtils - Cannot determine local hostname
+2026-01-09 06:01:20 [main] INFO  c.h.b.BookingServiceApplication - Started BookingServiceApplication in 16.155 seconds (process running for 16.739)
+2026-01-09 06:02:50 [http-nio-8082-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-09 06:02:50 [http-nio-8082-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-01-09 06:02:50 [http-nio-8082-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 4 ms
+2026-01-09 06:03:18 [http-nio-8082-exec-2] WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver - Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'PUT' is not supported]
+2026-01-09 06:06:18 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 06:11:18 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 06:16:18 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 06:21:18 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 06:26:18 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 06:31:18 [AsyncResolver-bootstrap-executor-%d] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration

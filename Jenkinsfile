@@ -12,7 +12,7 @@ pipeline {
         JAVA_HOME = 'C:\\Program Files\\java\\jdk-17'
         MAVEN_HOME = 'C:\\apache-maven-3.9.9'
         MAVEN_LOCAL_REPO = "${env.WORKSPACE}\\.m2\\repository"
-        PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
+        PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Windows\\System32;${env.PATH}"
         KUBE_NAMESPACE = 'hotel-management'
     }
     
@@ -231,27 +231,70 @@ pipeline {
                 }
             }
         }
-        stage('Restart Docker Daemon') {
-    steps {
-        script {
-            echo '🔄 Restarting Docker daemon...'
-            bat '''
-                net stop com.docker.service
-                timeout /t 5
-                net start com.docker.service
-                timeout /t 10
-                docker info
-            '''
-        }
-    }
-}
+        
         stage('Prepare Docker Environment') {
             steps {
                 script {
                     echo '🐳 Preparing Docker environment...'
+                    
+                    // Vérifier si Docker est fonctionnel
+                    def dockerRunning = powershell(
+                        returnStatus: true,
+                        script: 'docker info 2>$null; exit $LASTEXITCODE'
+                    )
+                    
+                    if (dockerRunning != 0) {
+                        echo '⚠️ Docker not responsive, attempting restart...'
+                        powershell '''
+                            try {
+                                Write-Host "Stopping Docker service..."
+                                Stop-Service -Name "com.docker.service" -Force -ErrorAction Stop
+                                Start-Sleep -Seconds 5
+                                
+                                Write-Host "Starting Docker service..."
+                                Start-Service -Name "com.docker.service" -ErrorAction Stop
+                                Start-Sleep -Seconds 15
+                                
+                                Write-Host "Verifying Docker..."
+                                docker info
+                                Write-Host "✅ Docker restarted successfully"
+                            } catch {
+                                Write-Host "⚠️ Service restart failed, trying Docker Desktop..."
+                                
+                                # Tenter de redémarrer Docker Desktop
+                                Get-Process "Docker Desktop" -ErrorAction SilentlyContinue | Stop-Process -Force
+                                Start-Sleep -Seconds 5
+                                
+                                Start-Process "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe"
+                                Start-Sleep -Seconds 30
+                                
+                                # Attendre que Docker soit prêt
+                                $maxAttempts = 12
+                                $attempt = 0
+                                while ($attempt -lt $maxAttempts) {
+                                    try {
+                                        docker info 2>$null
+                                        if ($LASTEXITCODE -eq 0) {
+                                            Write-Host "✅ Docker Desktop is ready!"
+                                            exit 0
+                                        }
+                                    } catch {
+                                        Write-Host "Waiting for Docker... ($attempt/$maxAttempts)"
+                                    }
+                                    Start-Sleep -Seconds 5
+                                    $attempt++
+                                }
+                                
+                                Write-Host "❌ Failed to start Docker"
+                                exit 1
+                            }
+                        '''
+                    } else {
+                        echo '✅ Docker is already running'
+                    }
+                    
+                    // Afficher l'état de Docker
                     bat '''
-                        echo Checking Docker daemon status...
-                        docker info
                         echo.
                         echo Docker disk usage before cleanup:
                         docker system df
@@ -296,14 +339,13 @@ pipeline {
                                         echo "✅ ${service.name} image built successfully"
                                     } catch (Exception e) {
                                         echo "⚠️ Build failed for ${service.name}, retrying..."
-                                        // Wait a bit before retry
                                         sleep time: 10, unit: 'SECONDS'
                                         throw e
                                     }
                                 }
                             }
                             
-                            // Small delay between builds to avoid overwhelming Docker
+                            // Délai entre les builds
                             sleep time: 5, unit: 'SECONDS'
                             
                         } catch (Exception e) {
@@ -312,7 +354,7 @@ pipeline {
                         }
                     }
                     
-                    // Check if there were any build errors
+                    // Vérifier les erreurs
                     if (buildErrors.size() > 0) {
                         echo "❌ Build errors occurred for the following services:"
                         buildErrors.each { error ->

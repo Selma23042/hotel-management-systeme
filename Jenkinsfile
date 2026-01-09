@@ -13,14 +13,16 @@ pipeline {
     }
     
     environment {
-        PROJECT_NAME = 'hotel-management'
-        JAVA_HOME = 'C:\\Program Files\\java\\jdk-17'
-        MAVEN_HOME = 'C:\\apache-maven-3.9.9'
-        MAVEN_LOCAL_REPO = "${env.WORKSPACE}\\.m2\\repository"
-        PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Windows\\System32;${env.PATH}"
-        KUBE_NAMESPACE = 'hotel-management'
-        MAVEN_OPTS = '-Xmx2048m -XX:MaxPermSize=512m -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=180'
-    }
+    PROJECT_NAME = 'hotel-management'
+    JAVA_HOME = 'C:\\Program Files\\java\\jdk-17'
+    MAVEN_HOME = 'C:\\apache-maven-3.9.9'
+    MAVEN_LOCAL_REPO = "${env.WORKSPACE}\\.m2\\repository"
+    PATH = "${JAVA_HOME}\\bin;${MAVEN_HOME}\\bin;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Windows\\System32;${env.PATH}"
+    KUBE_NAMESPACE = 'hotel-management'
+    
+    // CORRECTION ICI : Supprimer -XX:MaxPermSize=512m
+    MAVEN_OPTS = '-Xmx2048m -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=180'
+}
     
     stages {
         stage('Clean Maven Cache') {

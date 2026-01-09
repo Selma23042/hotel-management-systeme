@@ -231,9 +231,65 @@ pipeline {
         stage('Stop Running Containers') {
             steps {
                 script {
-                    echo '🛑 Stopping existing containers...'
+                    echo '🛑 Stopping existing containers and freeing ports...'
                     dir('docker') {
-                        bat 'docker-compose down || echo "No containers to stop"'
+                        bat '''
+                            @echo off
+                            echo Stopping Docker Compose services...
+                            docker-compose down -v --remove-orphans || echo "No containers to stop"
+                            
+                            echo.
+                            echo Killing processes on critical ports...
+                            
+                            REM Kill process on port 8761 (Eureka)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":8761" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 8761
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            REM Kill process on port 8080 (Gateway)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":8080" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 8080
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            REM Kill process on port 8081 (Room Service)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":8081" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 8081
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            REM Kill process on port 8082 (Booking Service)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":8082" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 8082
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            REM Kill process on port 8083 (Customer Service)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":8083" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 8083
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            REM Kill process on port 8084 (Billing Service)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":8084" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 8084
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            REM Kill process on port 4200 (Frontend)
+                            for /f "tokens=5" %%a in ('netstat -aon ^| find ":4200" ^| find "LISTENING"') do (
+                                echo Killing process %%a on port 4200
+                                taskkill /F /PID %%a 2>nul
+                            )
+                            
+                            echo.
+                            echo Waiting for ports to be released...
+                            timeout /t 5 /nobreak
+                            
+                            echo.
+                            echo Cleanup completed!
+                        '''
                     }
                 }
             }

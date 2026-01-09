@@ -307,18 +307,21 @@ pipeline {
         }
         
         stage('Deploy Application') {
-            steps {
-                script {
-                    echo '🚀 Deploying application...'
-                    dir('docker') {
-                        bat 'docker-compose up -d'
-                    }
-                    
-                    echo '⏳ Waiting for services to be healthy...'
-                    sleep time: 30, unit: 'SECONDS'
-                }
+    steps {
+        script {
+            echo '🚀 Deploying application...'
+            dir('docker') {
+                // Use docker compose (v2) or docker-compose (v1) with compatibility flag
+                bat '''
+                    docker compose up -d 2>nul || docker-compose --compatibility up -d
+                '''
             }
+            
+            echo '⏳ Waiting for services to be healthy...'
+            sleep time: 30, unit: 'SECONDS'
         }
+    }
+}
         
         stage('Health Check') {
             steps {

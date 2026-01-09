@@ -22,3 +22,7 @@
 2026-01-09 01:33:24 [AsyncResolver-bootstrap-executor-0] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
 2026-01-09 01:38:24 [AsyncResolver-bootstrap-executor-0] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
 2026-01-09 01:40:31 [HikariPool-1 housekeeper] WARN  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1m10s308ms656µs400ns).
+2026-01-09 01:44:04 [AsyncResolver-bootstrap-executor-0] INFO  c.n.d.s.r.aws.ConfigClusterResolver - Resolving eureka endpoints via configuration
+2026-01-09 01:45:44 [DiscoveryClient-HeartbeatExecutor-0] INFO  c.netflix.discovery.DiscoveryClient - DiscoveryClient_ROOM-SERVICE/localhost:room-service:8081 - Re-registering apps/ROOM-SERVICE
+2026-01-09 01:45:44 [DiscoveryClient-HeartbeatExecutor-0] INFO  c.netflix.discovery.DiscoveryClient - DiscoveryClient_ROOM-SERVICE/localhost:room-service:8081: registering service...
+2026-01-09 01:45:44 [DiscoveryClient-HeartbeatExecutor-0] INFO  c.netflix.discovery.DiscoveryClient - DiscoveryClient_ROOM-SERVICE/localhost:room-service:8081 - registration status: 204

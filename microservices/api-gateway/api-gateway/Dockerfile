@@ -2,8 +2,8 @@
 FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
-# Remonter 3 niveaux pour accéder à hotel-parent
-COPY ../../../hotel-parent/pom.xml ./parent-pom.xml
+# Copier le pom parent
+COPY hotel-parent/pom.xml ./parent-pom.xml
 RUN mvn install:install-file \
     -Dfile=./parent-pom.xml \
     -DgroupId=com.hotel \
@@ -11,9 +11,9 @@ RUN mvn install:install-file \
     -Dversion=0.0.1-SNAPSHOT \
     -Dpackaging=pom
 
-# Copier depuis le dossier courant
-COPY pom.xml ./api-gateway/pom.xml
-COPY src ./api-gateway/src
+# Copier le pom et src du service
+COPY microservices/api-gateway/api-gateway/pom.xml ./api-gateway/pom.xml
+COPY microservices/api-gateway/api-gateway/src ./api-gateway/src
 
 WORKDIR /app/api-gateway
 RUN mvn clean package -DskipTests

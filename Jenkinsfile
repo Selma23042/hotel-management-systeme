@@ -49,7 +49,19 @@ pipeline {
         stage('Install Parent POM') {
             steps {
                 echo '📦 Installing parent POM...'
-                bat "mvn clean install -N -DskipTests -Dmaven.repo.local=%MAVEN_LOCAL_REPO%"
+                script {
+                    bat '''
+                        @echo off
+                        echo Current directory:
+                        cd
+                        echo.
+                        echo Listing files:
+                        dir pom.xml
+                        echo.
+                        echo Installing parent POM...
+                        mvn clean install -N -DskipTests
+                    '''
+                }
             }
         }
         

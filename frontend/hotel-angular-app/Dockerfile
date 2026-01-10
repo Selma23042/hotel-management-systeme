@@ -4,9 +4,14 @@ WORKDIR /app
 
 # Copier les fichiers depuis le bon chemin
 COPY frontend/hotel-angular-app/package*.json ./
-RUN npm ci
+
+# Installer avec legacy peer deps si nécessaire
+RUN npm ci --prefer-offline --no-audit
+
 COPY frontend/hotel-angular-app/ .
-RUN npm run build -- --configuration production
+
+# Build avec limite de mémoire Node.js
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build -- --configuration production
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine

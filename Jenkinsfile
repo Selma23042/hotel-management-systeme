@@ -251,7 +251,7 @@ pipeline {
 }
 
         
-        stage('Build Docker Images') {
+     stage('Build Docker Images') {
     steps {
         script {
             echo '🐳 Building Docker images sequentially from project root...'
@@ -273,14 +273,45 @@ pipeline {
                 def maxRetries = 2
                 def success = false
                 
+                // Timeout spécifique pour le frontend
+                def buildTimeout = service.name == 'frontend' ? 20 : 10
+                
                 for (int attempt = 1; attempt <= maxRetries && !success; attempt++) {
                     try {
-                        bat "docker build -t ${service.name}:latest -f ${service.path} . --progress=plain"
+                        timeout(time: buildTimeout, unit: 'MINUTES') {
+                            // Commande de build avec options optimisées
+                            if (service.name == 'frontend') {
+                                bat """
+                                    docker build ^
+                                    --memory=4g ^
+                                    --memory-swap=4g ^
+                                    --network=host ^
+                                    -t ${service.name}:latest ^
+                                    -f ${service.path} . ^
+                                    --progress=plain ^
+                                    --no-cache
+                                """
+                            } else {
+                                bat "docker build -t ${service.name}:latest -f ${service.path} . --progress=plain"
+                            }
+                        }
                         echo "✅ Successfully built ${service.name}"
                         success = true
+                    } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+                        echo "⏰ Build timeout for ${service.name} after ${buildTimeout} minutes"
+                        if (attempt < maxRetries) {
+                            echo "⚠️ Retrying... (attempt ${attempt}/${maxRetries})"
+                            // Nettoyer les containers et images intermédiaires
+                            bat 'docker system prune -f || echo "Cleanup skipped"'
+                            sleep(10)
+                        } else {
+                            echo "❌ Failed to build ${service.name} after ${maxRetries} retries: Timeout"
+                            buildErrors[service.name] = "Build timeout after ${buildTimeout} minutes"
+                        }
                     } catch (Exception e) {
                         if (attempt < maxRetries) {
                             echo "⚠️ Build failed for ${service.name}, retrying... (attempt ${attempt}/${maxRetries})"
+                            bat 'docker system prune -f || echo "Cleanup skipped"'
                             sleep(10)
                         } else {
                             echo "❌ Failed to build ${service.name} after ${maxRetries} retries: ${e.message}"
